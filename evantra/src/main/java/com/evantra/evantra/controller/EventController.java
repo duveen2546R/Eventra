@@ -2,6 +2,7 @@ package com.evantra.evantra.controller;
 
 import com.evantra.evantra.model.*;
 import com.evantra.evantra.repository.*;
+import com.evantra.evantra.service.EmailService; // Import the new EmailService
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,9 @@ public class EventController {
     @Autowired private EventRepository eventRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EventParticipantRepository eventParticipantRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     @GetMapping
     public List<Event> getAllEvents() {
@@ -43,6 +47,7 @@ public class EventController {
                 .map(event -> {
                     event.setTitle(eventDetails.getTitle());
                     event.setDescription(eventDetails.getDescription());
+                    // Add other fields you want to be updatable
                     eventRepository.save(event);
                     return ResponseEntity.ok(event);
                 })
@@ -53,6 +58,8 @@ public class EventController {
     public ResponseEntity<?> deleteEvent(@PathVariable UUID id) {
         return eventRepository.findById(id)
                 .map(event -> {
+                    // Before deleting an event, you might want to handle participants and payments first
+                    // For now, we'll just delete the event directly.
                     eventRepository.delete(event);
                     return ResponseEntity.ok().build();
                 })
@@ -74,19 +81,27 @@ public class EventController {
             return ResponseEntity.badRequest().body("User is already registered for this event.");
         }
 
+        // Simulate payment if it's a paid event
         if (event.getAmount().compareTo(BigDecimal.ZERO) > 0) {
             System.out.println("Simulating successful payment for user " + user.getEmail());
+            // In a real application, you would create a Payment record here
         }
 
+        // Create the participation record
         EventParticipant participant = new EventParticipant();
         participant.setEvent(event);
         participant.setUser(user);
-        
         EventParticipant savedParticipant = eventParticipantRepository.save(participant);
 
         String qrCodeData = savedParticipant.getParticipantId().toString();
-        savedParticipant.setQrCodeUrl("/api/qr/" + qrCodeData);
+        // You can save the URL, but the data itself is more important for the email
+        savedParticipant.setQrCodeUrl("/api/participants/" + qrCodeData + "/qr"); 
         eventParticipantRepository.save(savedParticipant);
+
+        final User finalUser = user;
+        final Event finalEvent = event;
+        new Thread(() -> emailService.sendEventRegistrationEmail(finalUser, finalEvent, qrCodeData)).start();
+        // ---------------------------------------------
 
         return ResponseEntity.ok(savedParticipant);
     }
@@ -106,6 +121,4 @@ public class EventController {
 
         return ResponseEntity.ok(stats);
     }
-
-    
 }

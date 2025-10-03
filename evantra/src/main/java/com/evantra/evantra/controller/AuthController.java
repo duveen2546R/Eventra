@@ -6,6 +6,7 @@ import com.evantra.evantra.dto.RegisterRequest;
 import com.evantra.evantra.model.User;
 import com.evantra.evantra.repository.UserRepository;
 import com.evantra.evantra.security.JwtUtil;
+import com.evantra.evantra.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +25,11 @@ public class AuthController {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtUtil jwtUtil;
 
+    // --- NEWLY INJECTED SERVICE ---
+    @Autowired
+    private EmailService emailService;
+    // ----------------------------
+
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
         if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
@@ -38,7 +44,9 @@ public class AuthController {
         user.setGender(registerRequest.getGender());
         user.setDob(registerRequest.getDob());
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        new Thread(() -> emailService.sendWelcomeEmail(savedUser)).start();
 
         return ResponseEntity.ok("User registered successfully!");
     }
