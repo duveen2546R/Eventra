@@ -29,6 +29,7 @@
           <font-awesome-icon :icon="['fas', 'calendar-alt']" /> Events
         </router-link>
 
+
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
@@ -203,7 +204,9 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { useRouter } from 'vue-router'; // Import useRouter
+import axios from "axios";
 
+axios.defaults.baseURL = "http://localhost:8080";
 library.add(fas);
 
 const router = useRouter(); // Initialize router
@@ -274,21 +277,60 @@ const validateRegisterForm = () => {
   return Object.keys(registerErrors.value).length === 0;
 };
 
-const handleLogin = () => {
+const handleLogin = async () => {
   if (validateLoginForm()) {
-    alert(`Logged in as ${loginForm.value.email}`);
-    // Simulate successful login and navigate
-    router.push('/home'); // Navigate to the home page
+    try {
+      const response = await axios.post("/api/auth/login", {
+        email: loginForm.value.email,
+        password: loginForm.value.password,
+      });
+
+      // Save JWT token for authentication
+      const token = response.data.token || response.data.jwt;
+      if (token) {
+        localStorage.setItem("token", token);
+        alert("Login successful!");
+        router.push("/home");
+      } else {
+        alert("Login successful, but no token received.");
+      }
+    } catch (error) {
+      console.error(error);
+      if (error.response && error.response.data) {
+        alert(error.response.data.message || "Invalid credentials");
+      } else {
+        alert("Login failed. Please try again.");
+      }
+    }
   }
 };
 
-const handleRegister = () => {
+
+const handleRegister = async () => {
   if (validateRegisterForm()) {
-    // Simulate OTP sent
-    otpSent.value = true;
-    otpError.value = ""; // Clear any previous OTP errors
+    try {
+      const response = await axios.post("/api/auth/register", {
+        name: registerForm.value.name,
+        email: registerForm.value.email,
+        dob: registerForm.value.dob,
+        gender: registerForm.value.gender,
+        phoneNo: registerForm.value.phone,
+        password: registerForm.value.password,
+      });
+
+      console.log(response.data);
+      otpSent.value = true; // Continue to OTP simulation or redirect if you skip OTP
+      otpError.value = "";
+    } catch (error) {
+      if (error.response && error.response.data) {
+        alert(error.response.data);
+      } else {
+        alert("Registration failed. Please try again.");
+      }
+    }
   }
 };
+
 
 const verifyOtp = () => {
   otpError.value = "";

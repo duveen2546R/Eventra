@@ -1,18 +1,38 @@
 import { createRouter, createWebHistory } from "vue-router";
+
+// ✅ Import your pages
 import LandingPage from "../pages/LandingPage.vue";
 import HomePage from "../pages/HomePage.vue";
 import AuthPage from "../pages/AuthPage.vue";
+import EventsPage from "../pages/EventsPage.vue";
+import MyEventsPage from "../pages/MyEventsPage.vue";
+import PaymentsPage from "../pages/PaymentsPage.vue";
 
 const routes = [
   {
     path: "/",
     name: "LandingPage",
-    component: LandingPage, // 👈 This loads first
+    component: LandingPage, // 👈 First page on load
   },
   {
     path: "/home",
     name: "HomePage",
     component: HomePage,
+  },
+  {
+    path: "/events",
+    name: "EventsPage",
+    component: EventsPage,
+  },
+  {
+    path: "/myevents",
+    name: "MyEventsPage",
+    component: MyEventsPage,
+  },
+  {
+    path: "/payments",
+    name: "PaymentsPage",
+    component: PaymentsPage,
   },
   {
     path: "/auth",
@@ -24,6 +44,10 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior() {
+    // Smooth scroll to top when changing routes
+    return { top: 0, behavior: "smooth" };
+  },
 });
 
 export default router;
