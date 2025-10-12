@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from "vue-router";
 
-// ✅ Import your pages
 import LandingPage from "../pages/LandingPage.vue";
 import HomePage from "../pages/HomePage.vue";
 import AuthPage from "../pages/AuthPage.vue";
 import EventsPage from "../pages/EventsPage.vue";
 import MyEventsPage from "../pages/MyEventsPage.vue";
 import PaymentsPage from "../pages/PaymentsPage.vue";
+import CreateEventPage from "@/pages/CreateEventPage.vue";
 
 const routes = [
   {
@@ -39,6 +39,11 @@ const routes = [
     name: "AuthPage",
     component: AuthPage,
   },
+  {
+    path: "/create",
+    name: "CreateEventPage",
+    component: CreateEventPage,
+  }
 ];
 
 const router = createRouter({

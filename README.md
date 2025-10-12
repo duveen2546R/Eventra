@@ -8,6 +8,7 @@ npm install @fortawesome/vue-fontawesome @fortawesome/fontawesome-svg-core @fort
 npm install -D tailwindcss@3.4.13 postcss autoprefixer
 npx tailwindcss init -p
 npm install axios
+npm install jwt-decode
 ```
 
 ```bash

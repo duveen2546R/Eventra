@@ -29,7 +29,6 @@
           <font-awesome-icon :icon="['fas', 'calendar-alt']" /> Events
         </router-link>
 
-
         <!-- Theme Toggle -->
         <button
           @click="toggleTheme"
@@ -51,7 +50,6 @@
         class="hidden md:flex items-center justify-center transition-all duration-700"
         :class="isRegister ? 'order-2' : 'order-1'"
       >
-        <!-- No extra styling/dimensions here for the video itself -->
         <video autoplay loop muted playsinline class="w-full h-auto max-h-[80vh] object-contain rounded-3xl">
           <source src="@/assets/auth.webm" type="video/webm" />
         </video>
@@ -71,7 +69,7 @@
             :transition="{ duration: 0.8 }"
           >
             <h2 class="text-3xl font-bold mb-6 text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              {{ isRegister ? (otpSent ? 'Verify OTP' : 'Create Account') : 'Welcome Back' }}
+              {{ isRegister ? 'Create Account' : 'Welcome Back' }}
             </h2>
 
             <!-- LOGIN FORM -->
@@ -93,13 +91,21 @@
               </div>
               <div class="relative">
                 <input
-                  type="password"
+                  :type="showLoginPassword ? 'text' : 'password'"
                   v-model="loginForm.password"
                   placeholder="Password"
-                  class="auth-input"
+                  class="auth-input pr-10"
                   :class="{ 'input-error': loginErrors.password }"
                   required
                 />
+                <button
+                  type="button"
+                  @click="toggleLoginPasswordVisibility"
+                  class="password-toggle-button"
+                  aria-label="Toggle password visibility"
+                >
+                  <font-awesome-icon :icon="['fas', showLoginPassword ? 'eye-slash' : 'eye']" />
+                </button>
                 <p v-if="loginErrors.password" class="error-message">{{ loginErrors.password }}</p>
               </div>
 
@@ -110,7 +116,7 @@
 
             <!-- REGISTER FORM -->
             <form
-              v-else-if="!otpSent"
+              v-else
               @submit.prevent="handleRegister"
               class="flex flex-col gap-4"
             >
@@ -148,31 +154,27 @@
                 <p v-if="registerErrors.phone" class="error-message">{{ registerErrors.phone }}</p>
               </div>
               <div class="relative">
-                <input type="password" v-model="registerForm.password" placeholder="Password" class="auth-input" :class="{ 'input-error': registerErrors.password }" required />
+                <input
+                  :type="showRegisterPassword ? 'text' : 'password'"
+                  v-model="registerForm.password"
+                  placeholder="Password"
+                  class="auth-input pr-10"
+                  :class="{ 'input-error': registerErrors.password }"
+                  required
+                />
+                <button
+                  type="button"
+                  @click="toggleRegisterPasswordVisibility"
+                  class="password-toggle-button"
+                  aria-label="Toggle password visibility"
+                >
+                  <font-awesome-icon :icon="['fas', showRegisterPassword ? 'eye-slash' : 'eye']" />
+                </button>
                 <p v-if="registerErrors.password" class="error-message">{{ registerErrors.password }}</p>
               </div>
 
               <button type="submit" class="auth-button">
                 <font-awesome-icon :icon="['fas', 'user-plus']" /> Register
-              </button>
-            </form>
-
-            <!-- OTP FORM -->
-            <form v-else @submit.prevent="verifyOtp" class="flex flex-col gap-4">
-              <div class="relative">
-                <input
-                  type="text"
-                  v-model="otpCode"
-                  placeholder="Enter OTP"
-                  class="auth-input text-center tracking-widest"
-                  maxlength="6"
-                  :class="{ 'input-error': otpError }"
-                  required
-                />
-                <p v-if="otpError" class="error-message">{{ otpError }}</p>
-              </div>
-              <button type="submit" class="auth-button">
-                <font-awesome-icon :icon="['fas', 'check']" /> Verify OTP
               </button>
             </form>
 
@@ -190,6 +192,17 @@
       </div>
     </main>
 
+    <!-- Global Alert/Notification System -->
+    <div v-if="alert.message" :class="['alert-container', alert.type]">
+      <div class="alert-content">
+        <font-awesome-icon :icon="['fas', alert.icon]" class="alert-icon" />
+        <p class="alert-message">{{ alert.message }}</p>
+        <button @click="clearAlert" class="alert-close">
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
+      </div>
+    </div>
+
     <!-- 🦶 Footer -->
     <footer class="py-6 text-center text-gray-400 border-t border-purple-400/20 bg-transparent z-10">
       © {{ new Date().getFullYear() }} Eventra — Empower Your Events
@@ -203,18 +216,53 @@ import { Motion } from "@motionone/vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { useRouter } from 'vue-router'; // Import useRouter
+import { useRouter } from 'vue-router';
 import axios from "axios";
 
 axios.defaults.baseURL = "http://localhost:8080";
 library.add(fas);
 
-const router = useRouter(); // Initialize router
+const router = useRouter();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
 const isRegister = ref(false);
-const otpSent = ref(false);
-const otpCode = ref("");
+
+// Password visibility states
+const showLoginPassword = ref(false);
+const showRegisterPassword = ref(false);
+
+const toggleLoginPasswordVisibility = () => {
+  showLoginPassword.value = !showLoginPassword.value;
+};
+
+const toggleRegisterPasswordVisibility = () => {
+  showRegisterPassword.value = !showRegisterPassword.value;
+};
+
+// Alert system
+const alert = ref({
+  message: '',
+  type: '', // 'success', 'error', 'info'
+  icon: '',
+  timeout: null,
+});
+
+const showAlert = (message, type, duration = 3000) => {
+  clearTimeout(alert.value.timeout);
+  alert.value.message = message;
+  alert.value.type = type;
+  alert.value.icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-circle' : 'info-circle');
+  alert.value.timeout = setTimeout(() => {
+    clearAlert();
+  }, duration);
+};
+
+const clearAlert = () => {
+  alert.value.message = '';
+  alert.value.type = '';
+  alert.value.icon = '';
+};
+
 
 // 🧾 Login form
 const loginForm = ref({
@@ -233,7 +281,6 @@ const registerForm = ref({
   password: "",
 });
 const registerErrors = ref({});
-const otpError = ref("");
 
 
 const applyTheme = () => {
@@ -249,11 +296,10 @@ onMounted(applyTheme);
 // 🧠 Logic
 const toggleAuthMode = () => {
   isRegister.value = !isRegister.value;
-  otpSent.value = false;
-  // Clear errors when switching modes
+  // Clear errors and alerts when switching modes
   loginErrors.value = {};
   registerErrors.value = {};
-  otpError.value = "";
+  clearAlert();
 };
 
 const validateLoginForm = () => {
@@ -285,26 +331,38 @@ const handleLogin = async () => {
         password: loginForm.value.password,
       });
 
-      // Save JWT token for authentication
-      const token = response.data.token || response.data.jwt;
+      const data = response.data;
+
+      // Token might be named `jwt` in backend response
+      const token = data.jwt || data.token;
+      const message = data.message || "Login successful!";
+
       if (token) {
+        // Store token
         localStorage.setItem("token", token);
-        alert("Login successful!");
+
+        // Optionally store user details
+        if (data.userData) {
+          localStorage.setItem("user", JSON.stringify(data.userData));
+        }
+
+        showAlert(message, "success");
         router.push("/home");
       } else {
-        alert("Login successful, but no token received.");
+        showAlert("Login succeeded but no token received.", "warning");
       }
     } catch (error) {
-      console.error(error);
-      if (error.response && error.response.data) {
-        alert(error.response.data.message || "Invalid credentials");
-      } else {
-        alert("Login failed. Please try again.");
-      }
+      console.error("Login error:", error);
+
+      const message =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Invalid email or password.";
+
+      showAlert(message, "error");
     }
   }
 };
-
 
 const handleRegister = async () => {
   if (validateRegisterForm()) {
@@ -318,30 +376,35 @@ const handleRegister = async () => {
         password: registerForm.value.password,
       });
 
-      console.log(response.data);
-      otpSent.value = true; // Continue to OTP simulation or redirect if you skip OTP
-      otpError.value = "";
-    } catch (error) {
-      if (error.response && error.response.data) {
-        alert(error.response.data);
-      } else {
-        alert("Registration failed. Please try again.");
+      const data = response.data;
+
+      const token = data.jwt || data.token;
+      const message = data.message || "Registration successful!";
+
+      if (token) {
+        localStorage.setItem("token", token);
       }
+
+      // Save user data if returned
+      if (data.userData) {
+        localStorage.setItem("user", JSON.stringify(data.userData));
+      }
+
+      showAlert(message, "success");
+      router.push("/home");
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      const message =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Registration failed. Please try again.";
+
+      showAlert(message, "error");
     }
   }
 };
 
-
-const verifyOtp = () => {
-  otpError.value = "";
-  if (otpCode.value.length === 6 && /^\d+$/.test(otpCode.value)) {
-    alert(`OTP Verified for ${registerForm.value.email}`);
-    // Simulate successful OTP verification and navigate
-    router.push('/home'); // Navigate to the home page
-  } else {
-    otpError.value = "Please enter a valid 6-digit OTP.";
-  }
-};
 </script>
 
 <style scoped>
@@ -424,6 +487,31 @@ html, body {
   border-color: rgba(200, 0, 255, 0.6);
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* Password Toggle Button */
+.password-toggle-button {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(150, 0, 255, 0.6);
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.3s ease;
+}
+
+.password-toggle-button:hover {
+  color: rgba(200, 0, 255, 0.8);
+}
+.dark .password-toggle-button {
+  color: rgba(255, 255, 255, 0.6);
+}
+.dark .password-toggle-button:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 
 /* Error State for Inputs */
 .input-error {
@@ -522,5 +610,76 @@ html, body {
 .auth-button:hover {
   transform: scale(1.05);
   box-shadow: 0 0 25px rgba(236, 72, 153, 0.4);
+}
+
+/* Alert Container Styles */
+.alert-container {
+  position: fixed;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease-in-out;
+  animation: fadeInDown 0.5s ease-out;
+}
+
+.alert-container.success {
+  background-color: #10b981; /* Tailwind green-500 */
+  color: white;
+}
+
+.alert-container.error {
+  background-color: #ef4444; /* Tailwind red-500 */
+  color: white;
+}
+
+.alert-container.info {
+  background-color: #3b82f6; /* Tailwind blue-500 */
+  color: white;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.alert-icon {
+  font-size: 1.25rem;
+}
+
+.alert-message {
+  font-weight: 500;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  opacity: 0.8;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 </style>

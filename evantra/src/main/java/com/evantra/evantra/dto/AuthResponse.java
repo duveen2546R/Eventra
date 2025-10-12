@@ -1,12 +1,35 @@
 package com.evantra.evantra.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import java.util.Map;
 
-@Getter
-@Setter
-@AllArgsConstructor
 public class AuthResponse {
     private String token;
+    private String message;
+    private Map<String, Object> userData;
+
+    public AuthResponse(String token) {
+        this.token = token;
+    }
+
+    // Getters & Setters
+    public String getToken() {
+        return token;
+    }
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public Map<String, Object> getUserData() {
+        return userData;
+    }
+    public void setUserData(Map<String, Object> userData) {
+        this.userData = userData;
+    }
 }

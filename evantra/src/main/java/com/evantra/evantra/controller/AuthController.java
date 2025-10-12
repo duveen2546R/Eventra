@@ -16,6 +16,9 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -24,42 +27,87 @@ public class AuthController {
     @Autowired private UserRepository userRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private JwtUtil jwtUtil;
-
-    // --- NEWLY INJECTED SERVICE ---
-    @Autowired
-    private EmailService emailService;
-    // ----------------------------
+    @Autowired private EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody RegisterRequest registerRequest) {
-        if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Error: Email is already in use!");
+        try {
+            if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
+                return ResponseEntity.badRequest().body("Error: Email is already registered!");
+            }
+
+            User user = new User();
+            user.setName(registerRequest.getName());
+            user.setEmail(registerRequest.getEmail());
+            user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+            user.setPhoneNo(registerRequest.getPhoneNo());
+            user.setGender(registerRequest.getGender());
+            user.setDob(registerRequest.getDob());
+
+            User savedUser = userRepository.save(user);
+
+            // Send welcome email asynchronously
+            new Thread(() -> emailService.sendWelcomeEmail(savedUser)).start();
+
+            // Auto-login after registration
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(registerRequest.getEmail(), registerRequest.getPassword())
+            );
+
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtUtil.generateToken(userDetails);
+
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("user_id", savedUser.getUserId());
+            userData.put("name", savedUser.getName());
+            userData.put("email", savedUser.getEmail());
+            userData.put("phone_no", savedUser.getPhoneNo());
+            userData.put("gender", savedUser.getGender());
+            userData.put("dob", savedUser.getDob());
+
+            AuthResponse response = new AuthResponse(jwt);
+            response.setMessage("Registration successful!");
+            response.setUserData(userData);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Registration failed. Please try again.");
         }
-
-        User user = new User();
-        user.setName(registerRequest.getName());
-        user.setEmail(registerRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-        user.setPhoneNo(registerRequest.getPhoneNo());
-        user.setGender(registerRequest.getGender());
-        user.setDob(registerRequest.getDob());
-
-        User savedUser = userRepository.save(user);
-
-        new Thread(() -> emailService.sendWelcomeEmail(savedUser)).start();
-
-        return ResponseEntity.ok("User registered successfully!");
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
 
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String jwt = jwtUtil.generateToken(userDetails);
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String jwt = jwtUtil.generateToken(userDetails);
 
-        return ResponseEntity.ok(new AuthResponse(jwt));
+            // Fetch full user data from DB
+            User user = userRepository.findByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Map<String, Object> userData = new HashMap<>();
+            userData.put("user_id", user.getUserId());
+            userData.put("name", user.getName());
+            userData.put("email", user.getEmail());
+            userData.put("phone_no", user.getPhoneNo());
+            userData.put("gender", user.getGender());
+            userData.put("dob", user.getDob());
+
+            AuthResponse response = new AuthResponse(jwt);
+            response.setMessage("Login successful!");
+            response.setUserData(userData);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(401).body("Invalid email or password.");
+        }
     }
 }

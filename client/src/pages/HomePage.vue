@@ -62,6 +62,7 @@
               class="flex items-center gap-2 border border-purple-400/30 px-3 py-2 rounded-full transition-all duration-300 text-sm hover:bg-purple-600/20"
             >
               <font-awesome-icon :icon="['fas', 'user-circle']" class="text-lg" />
+              <span v-if="userName">{{ userName }}</span> 
             </button>
 
             <div
@@ -132,11 +133,13 @@ import { ref, onMounted } from "vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { fas } from "@fortawesome/free-solid-svg-icons";
+
 library.add(fas);
 
 const theme = ref(localStorage.getItem("theme") || "dark");
-const loggedIn = ref(localStorage.getItem("loggedIn") === "true"); // mock login state
+const loggedIn = ref(!!localStorage.getItem("token"));
 const dropdownOpen = ref(false);
+const userName = ref(""); 
 
 const applyTheme = () => {
   document.documentElement.classList.toggle("dark", theme.value === "dark");
@@ -146,16 +149,31 @@ const toggleTheme = () => {
   theme.value = theme.value === "dark" ? "light" : "dark";
   applyTheme();
 };
-onMounted(applyTheme);
+
+onMounted(() => {
+  applyTheme();
+
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    try {
+      const parsed = JSON.parse(userData);
+      userName.value = parsed.name || "";
+    } catch (err) {
+      console.error("Failed to parse user data:", err);
+    }
+  }
+});
+
 
 const toggleDropdown = () => {
   dropdownOpen.value = !dropdownOpen.value;
 };
 const logout = () => {
-  localStorage.removeItem("loggedIn");
+  localStorage.removeItem("token");
   loggedIn.value = false;
   dropdownOpen.value = false;
-  window.location.href = "/"; // redirect to landing page
+  userName.value = ""; // Clear user name on logout
+  window.location.href = "/auth";
 };
 
 const dashboardCards = [

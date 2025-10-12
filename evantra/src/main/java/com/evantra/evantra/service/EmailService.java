@@ -35,7 +35,7 @@ public class EmailService {
             String htmlContent = htmlTemplate.replace("${userName}", user.getName());
 
             helper.setTo(user.getEmail());
-            helper.setSubject("Welcome to Evantra!");
+            helper.setSubject("Welcome to Eventra!");
             helper.setText(htmlContent, true); // Set to true to send as HTML
 
             mailSender.send(mimeMessage);
