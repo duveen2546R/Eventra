@@ -207,6 +207,110 @@ html, body {
 @keyframes fogMove { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 5%) scale(1.2); } }
 @keyframes lightShift { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 10%) scale(1.1); } }
 
+/* 🌟 Enhanced Feature Card Styles */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2.5rem; /* Increased gap for better spacing */
+  margin-top: 4rem; /* Adjusted top margin */
+}
+
+.feature-card {
+  position: relative;
+  overflow: hidden;
+  padding: 2.5rem; /* Slightly more padding */
+  border-radius: 1.5rem; /* More rounded corners */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)); /* Subtle translucent background */
+  border: 1px solid rgba(150, 0, 255, 0.2); /* Soft purple border */
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); /* Smoother, more pronounced transition */
+  backdrop-filter: blur(10px); /* Add blur for a frosted glass effect */
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  text-align: center; /* Ensure content is centered */
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 70% 0%, rgba(200, 0, 255, 0.1), transparent 70%); /* Top-right light glow */
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.feature-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 30% 100%, rgba(255, 0, 200, 0.1), transparent 70%); /* Bottom-left light glow */
+  opacity: 0;
+  transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.feature-card:hover {
+  transform: translateY(-10px) scale(1.03); /* More lift and slight scale */
+  border-color: rgba(200, 0, 255, 0.6); /* More prominent border on hover */
+  box-shadow: 0 15px 50px rgba(150, 0, 255, 0.4), 0 0 80px rgba(255, 0, 200, 0.2); /* Enhanced glow effect */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); /* Slightly brighter background */
+}
+
+.feature-card:hover::before,
+.feature-card:hover::after {
+  opacity: 1; /* Make glows visible on hover */
+}
+
+.feature-card .icon {
+  font-size: 4.5rem; /* Larger icons */
+  margin-bottom: 1.5rem;
+  color: #c084fc; /* A vibrant purple for icons */
+  text-shadow: 0 0 20px rgba(150, 0, 255, 0.6); /* Icon glow */
+  transition: color 0.6s, text-shadow 0.6s;
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card:hover .icon {
+  color: #f472b6; /* Pinker on hover */
+  text-shadow: 0 0 30px rgba(255, 0, 200, 0.8), 0 0 50px rgba(200, 0, 255, 0.6);
+}
+
+.feature-card h4 {
+  font-size: 2.2rem; /* Larger title */
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: darkorchid;
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card p {
+  font-size: 1.1rem; /* Slightly larger text */
+  line-height: 1.8;
+  color: #ccc; /* Lighter gray for text */
+  position: relative;
+  z-index: 1;
+}
+
+/* Adjustments for dark theme specific styles if needed, otherwise these generally work for dark */
+.dark .feature-card {
+  background: linear-gradient(135deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.5));
+  border-color: rgba(150, 0, 255, 0.2);
+}
+
+.dark .feature-card:hover {
+  border-color: rgba(200, 0, 255, 0.6);
+  background: linear-gradient(135deg, rgba(22, 27, 34, 0.9), rgba(22, 27, 34, 0.6));
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .hero-section h1 {

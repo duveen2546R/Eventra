@@ -119,6 +119,11 @@
         </div>
       </div>
     </main>
+
+    <!-- 🦶 Footer -->
+    <footer class="py-6 text-center text-gray-400 border-t border-purple-400/20 bg-transparent">
+      © {{ new Date().getFullYear() }} Eventra — Empower Your Events
+    </footer>
   </div>
 </template>
 
