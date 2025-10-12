@@ -23,7 +23,7 @@
 
       <div class="flex items-center gap-3 md:gap-6">
         <router-link
-          to="/events"
+          to="/home"
           class="hidden md:flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-purple-600/30 border border-purple-400/40 transition-all duration-300"
         >
           <font-awesome-icon :icon="['fas', 'calendar-alt']" /> Events
