@@ -5,7 +5,6 @@
       ? 'bg-[#050505] text-white'
       : 'bg-gray-100 text-gray-900'"
   >
-    <!-- This displays your current route -->
     <router-view />
   </div>
 </template>
