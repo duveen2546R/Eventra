@@ -15,8 +15,8 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:5173",   // your Vue frontend (Vite dev server)
-                                "https://your-deployed-frontend-domain.com" // optional future domain
+                                "http://localhost:5173",
+                                "http://localhost:3000"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")

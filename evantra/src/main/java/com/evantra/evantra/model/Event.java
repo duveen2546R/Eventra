@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -48,6 +50,15 @@ public class Event {
 
     @Column(name = "status")
     private String status;
+
+    @Column(name = "event_date")
+    private LocalDate eventDate;
+
+    @Column(name = "event_time")
+    private LocalTime eventTime;
+
+    @Column(name = "remaining_capacity")
+    private BigDecimal remainingCapacity;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
