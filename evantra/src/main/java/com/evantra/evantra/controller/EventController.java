@@ -24,17 +24,18 @@ import java.util.UUID;
 @RequestMapping("/api/events")
 public class EventController {
 
-    // --- UPDATED INJECTIONS FOR RAZORPAY ---
+    // --- DEPENDENCY INJECTIONS ---
     @Autowired private RazorpayClient razorpayClient;
     @Autowired private RazorpayProperties razorpayProperties;
     @Autowired private EventRegistrationService eventRegistrationService;
-    // -------------------------------------
-
     @Autowired private EventRepository eventRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EventParticipantRepository eventParticipantRepository;
+    @Autowired private EventOrganizerRepository eventOrganizerRepository; // For the "My Events" feature
 
-    // ----- UNCHANGED METHODS -----
+    // ===================================================================
+    // = PUBLIC & GENERAL EVENT ENDPOINTS
+    // ===================================================================
 
     @GetMapping
     public List<Event> getAllEvents() {
@@ -47,18 +48,27 @@ public class EventController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-
+    
+    // ===================================================================
+    // = AUTHENTICATED EVENT MANAGEMENT (CRUD)
+    // ===================================================================
+    
     @PostMapping
     public Event createEvent(@RequestBody Event event) {
+        // NOTE: A more robust implementation would link the organizer automatically
+        // based on the logged-in user from the JWT token.
         return eventRepository.save(event);
     }
-
+    
     @PutMapping("/{id}")
     public ResponseEntity<Event> updateEvent(@PathVariable UUID id, @RequestBody Event eventDetails) {
         return eventRepository.findById(id)
                 .map(event -> {
                     event.setTitle(eventDetails.getTitle());
                     event.setDescription(eventDetails.getDescription());
+                    event.setLocation(eventDetails.getLocation());
+                    event.setAmount(eventDetails.getAmount());
+                    event.setCapacity(eventDetails.getCapacity());
                     eventRepository.save(event);
                     return ResponseEntity.ok(event);
                 })
@@ -69,10 +79,30 @@ public class EventController {
     public ResponseEntity<?> deleteEvent(@PathVariable UUID id) {
         return eventRepository.findById(id)
                 .map(event -> {
+                    // For production, you should handle cleanup of related participants and payments
                     eventRepository.delete(event);
                     return ResponseEntity.ok().build();
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ===================================================================
+    // = MY EVENTS & STATISTICS
+    // ===================================================================
+
+    @GetMapping("/mine")
+    public ResponseEntity<List<Event>> getMyEvents(@RequestParam UUID userId, @RequestParam String role) {
+        if (!userRepository.existsById(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+        if ("organizer".equalsIgnoreCase(role)) {
+            List<Event> organizedEvents = eventOrganizerRepository.findEventsByOrganizerUserId(userId);
+            return ResponseEntity.ok(organizedEvents);
+        } else if ("participant".equalsIgnoreCase(role)) {
+            List<Event> participatedEvents = eventParticipantRepository.findEventsByParticipantUserId(userId);
+            return ResponseEntity.ok(participatedEvents);
+        }
+        return ResponseEntity.badRequest().body(null);
     }
 
     @GetMapping("/{eventId}/stats")
@@ -82,28 +112,35 @@ public class EventController {
         }
         long totalRegistrations = eventParticipantRepository.countByEvent_EventId(eventId);
         long checkedInCount = eventParticipantRepository.countByEvent_EventIdAndCheckedIn(eventId, true);
-
         Map<String, Object> stats = new HashMap<>();
         stats.put("eventId", eventId);
         stats.put("totalRegistrations", totalRegistrations);
         stats.put("checkedInCount", checkedInCount);
-
         return ResponseEntity.ok(stats);
     }
-
-
-    // ----- METHODS UPDATED FOR RAZORPAY PAYMENT FLOW -----
-
+    
+    // ===================================================================
+    // = REGISTRATION AND PAYMENT FLOW
+    // ===================================================================
+    
     @PostMapping("/{eventId}/register-free")
     public ResponseEntity<?> registerForFreeEvent(@PathVariable UUID eventId, @RequestBody Map<String, String> payload) {
-        // ... Logic for free events ... (This method is unchanged)
-        // You should implement the full logic here
-        return ResponseEntity.ok("Successfully registered for the free event.");
-    }
+        UUID userId = UUID.fromString(payload.get("userId"));
+        Event event = eventRepository.findById(eventId).orElse(null);
+        User user = userRepository.findById(userId).orElse(null);
 
-    /**
-     * API Call 1: Creates a Razorpay Order and sends the order_id to the front end.
-     */
+        if (event == null || user == null) { return ResponseEntity.badRequest().body("Event or User not found"); }
+        if (event.getAmount() != null && event.getAmount().compareTo(BigDecimal.ZERO) > 0) {
+            return ResponseEntity.badRequest().body("This is a paid event. Please use the payment flow.");
+        }
+        if (eventParticipantRepository.existsByEventAndUser(event, user)) {
+            return ResponseEntity.badRequest().body("User is already registered for this event.");
+        }
+        
+        eventRegistrationService.finalizeRegistration(user, event, "FREE_REGISTRATION", "N/A");
+        return ResponseEntity.ok("Successfully registered for the free event. Confirmation email sent.");
+    }
+    
     @PostMapping("/{eventId}/create-order")
     public ResponseEntity<?> createOrder(@PathVariable UUID eventId, @RequestBody Map<String, String> payload) {
         try {
@@ -112,19 +149,15 @@ public class EventController {
             userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
             if (event.getAmount() == null || event.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                return ResponseEntity.badRequest().body("This is a free event. Please use the /register-free endpoint.");
+                return ResponseEntity.badRequest().body("This is a free event. Use the /register-free endpoint.");
             }
 
             BigDecimal amountInPaisa = event.getAmount().multiply(new BigDecimal("100")).setScale(0, RoundingMode.HALF_UP);
-
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInPaisa.intValue());
             orderRequest.put("currency", "INR");
-
-            // --- FIX APPLIED HERE: Create a shorter receipt ID ---
             String receiptId = "rcpt_" + System.currentTimeMillis();
             orderRequest.put("receipt", receiptId);
-            // ----------------------------------------------------
 
             Order order = razorpayClient.orders.create(orderRequest);
 
@@ -137,12 +170,7 @@ public class EventController {
             return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
         }
     }
-
-
-    /**
-     * API Call 2: Verifies the payment signature from Razorpay.
-     * If successful, it finalizes the event registration.
-     */
+    
     @PostMapping("/verify-payment")
     public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerificationRequest request) {
         try {
@@ -150,8 +178,7 @@ public class EventController {
             options.put("razorpay_order_id", request.getRazorpay_order_id());
             options.put("razorpay_payment_id", request.getRazorpay_payment_id());
             options.put("razorpay_signature", request.getRazorpay_signature());
-
-            // --- FIX APPLIED HERE: Use the injected properties object ---
+            
             boolean signatureIsValid = Utils.verifyPaymentSignature(options, razorpayProperties.getSecret());
 
             if (!signatureIsValid) {
@@ -163,7 +190,7 @@ public class EventController {
 
             EventParticipant participant = eventRegistrationService.finalizeRegistration(
                     user, event, request.getRazorpay_order_id(), request.getRazorpay_payment_id());
-
+            
             return ResponseEntity.ok(participant);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error verifying payment: " + e.getMessage());

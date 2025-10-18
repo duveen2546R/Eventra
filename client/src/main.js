@@ -7,3 +7,8 @@ import "./index.css"; // Tailwind entry
 const app = createApp(App);
 app.use(router);
 app.mount("#app");
+
+
+// --- ADD/VERIFY THESE TWO LINES ---
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-geosearch/dist/geosearch.css';

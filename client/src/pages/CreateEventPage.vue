@@ -20,7 +20,6 @@
           Eventra
         </h1>
       </div>
-
       <nav class="flex items-center gap-3 md:gap-6">
         <router-link to="/home" class="nav-link" :class="{ active: $route.path === '/home' }">
           <font-awesome-icon :icon="['fas', 'home']" /> Home
@@ -31,52 +30,28 @@
         <router-link to="/myevents" class="nav-link" :class="{ active: $route.path === '/myevents' }">
           <font-awesome-icon :icon="['fas', 'star']" /> My Events
         </router-link>
-        <router-link to="/payments" class="nav-link" :class="{ active: $route.path === '/payments' }">
-          <font-awesome-icon :icon="['fas', 'credit-card']" /> Payments
-        </router-link>
-
-        <!-- 👤 Auth Controls -->
+        <!-- Auth Controls -->
         <div class="relative">
           <template v-if="loggedIn">
-            <button
-              @click="toggleDropdown"
-              class="flex items-center gap-2 border border-purple-400/30 px-3 py-2 rounded-full transition-all duration-300 text-sm hover:bg-purple-600/20"
-            >
+            <button @click="toggleDropdown" class="flex items-center gap-2 border border-purple-400/30 px-3 py-2 rounded-full transition-all duration-300 text-sm hover:bg-purple-600/20">
               <font-awesome-icon :icon="['fas', 'user-circle']" class="text-lg" />
               <span v-if="userDetails.name">{{ userDetails.name }}</span>
             </button>
-
-            <div
-              v-if="dropdownOpen"
-              class="absolute right-0 mt-3 w-36 bg-white/10 backdrop-blur-lg border border-purple-400/30 rounded-xl shadow-lg text-sm z-50"
-            >
-              <button
-                @click="logout"
-                class="w-full flex items-center gap-2 px-4 py-2 hover:bg-purple-500/20 transition-all rounded-lg text-left"
-              >
-                <font-awesome-icon :icon="['fas', 'sign-out-alt']" />
-                Logout
+            <div v-if="dropdownOpen" class="absolute right-0 mt-3 w-36 bg-white/10 backdrop-blur-lg border border-purple-400/30 rounded-xl shadow-lg text-sm z-50">
+              <button @click="logout" class="w-full flex items-center gap-2 px-4 py-2 hover:bg-purple-500/20 transition-all rounded-lg text-left">
+                <font-awesome-icon :icon="['fas', 'sign-out-alt']" /> Logout
               </button>
             </div>
           </template>
-
           <template v-else>
-            <router-link
-              to="/auth"
-              class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300"
-            >
+            <router-link to="/auth" class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300">
               Sign In <font-awesome-icon :icon="['fas', 'arrow-right']" />
             </router-link>
           </template>
         </div>
-
-        <!-- 🌗 Theme Toggle -->
-        <button
-          @click="toggleTheme"
-          class="border border-purple-400/30 px-3 md:px-4 py-2 rounded-full transition-all duration-300 text-sm"
-        >
+        <!-- Theme Toggle -->
+        <button @click="toggleTheme" class="border border-purple-400/30 px-3 md:px-4 py-2 rounded-full transition-all duration-300 text-sm">
           <font-awesome-icon :icon="['fas', theme === 'dark' ? 'sun' : 'moon']" />
-          <span class="hidden md:inline">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
         </button>
       </nav>
     </header>
@@ -90,42 +65,40 @@
         Fill in the event details below to add a new event to Eventra.
       </p>
 
-      <form
-        @submit.prevent="createEvent"
-        class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl shadow-lg p-8 md:p-10 max-w-3xl mx-auto flex flex-col gap-6"
-      >
+      <form @submit.prevent="createEvent" class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl shadow-lg p-8 md:p-10 max-w-3xl mx-auto flex flex-col gap-6">
+        
+        <!-- Title & Description -->
         <div>
           <label class="text-sm text-gray-400">Title</label>
-          <input
-            v-model="event.title"
-            type="text"
-            placeholder="Enter event title"
-            class="input-box"
-            required
-          />
+          <input v-model="event.title" type="text" placeholder="Enter event title" class="input-box" required />
         </div>
-
         <div>
           <label class="text-sm text-gray-400">Description</label>
-          <textarea
-            v-model="event.description"
-            placeholder="Enter event description"
-            rows="3"
-            class="input-box resize-none"
-            required
-          ></textarea>
+          <textarea v-model="event.description" placeholder="Enter event description" rows="3" class="input-box resize-none" required></textarea>
         </div>
-
+        
+        <!-- MAP WITH SEARCH -->
+        <div>
+          <label class="text-sm text-gray-400">Set Event Location on Map</label>
+          <p class="text-xs text-gray-500 mb-2">Use the search bar on the map or click directly to place a marker.</p>
+          <div id="map-container" class="w-full h-80 rounded-xl border border-purple-400/30 mt-2 z-10"></div>
+          <div class="grid grid-cols-2 gap-6 mt-4">
+            <div>
+              <label class="text-sm text-gray-400">Latitude</label>
+              <input v-model="event.latitude" type="text" placeholder="Set by map" class="input-box bg-white/5 cursor-not-allowed" readonly />
+            </div>
+            <div>
+              <label class="text-sm text-gray-400">Longitude</label>
+              <input v-model="event.longitude" type="text" placeholder="Set by map" class="input-box bg-white/5 cursor-not-allowed" readonly />
+            </div>
+          </div>
+        </div>
+        
+        <!-- Other Event Details -->
         <div class="grid md:grid-cols-2 gap-6">
           <div>
-            <label class="text-sm text-gray-400">Location</label>
-            <input
-              v-model="event.location"
-              type="text"
-              placeholder="Enter event location"
-              class="input-box"
-              required
-            />
+            <label class="text-sm text-gray-400">Location Name</label>
+            <input v-model="event.location" type="text" placeholder="e.g., City Park Amphitheater" class="input-box" required />
           </div>
           <div>
             <label class="text-sm text-gray-400">Status</label>
@@ -136,18 +109,6 @@
             </select>
           </div>
         </div>
-
-        <div class="grid md:grid-cols-2 gap-6">
-          <div>
-            <label class="text-sm text-gray-400">Latitude</label>
-            <input v-model="event.latitude" type="text" placeholder="e.g. 12.9716" class="input-box" />
-          </div>
-          <div>
-            <label class="text-sm text-gray-400">Longitude</label>
-            <input v-model="event.longitude" type="text" placeholder="e.g. 77.5946" class="input-box" />
-          </div>
-        </div>
-
         <div class="grid md:grid-cols-3 gap-6">
           <div>
             <label class="text-sm text-gray-400">Date</label>
@@ -159,33 +120,20 @@
           </div>
           <div>
             <label class="text-sm text-gray-400">Amount (₹)</label>
-            <input
-              v-model.number="event.amount"
-              type="number"
-              step="0.01"
-              placeholder="0 for free"
-              class="input-box"
-              required
-            />
+            <input v-model.number="event.amount" type="number" step="0.01" placeholder="0 for free" class="input-box" required />
           </div>
         </div>
-
         <div class="grid md:grid-cols-2 gap-6">
           <div>
             <label class="text-sm text-gray-400">Capacity</label>
-            <input v-model.number="event.capacity" type="number" class="input-box" required />
+            <input v-model.number="event.capacity" type="number" placeholder="e.g. 100" class="input-box" required />
           </div>
           <div>
             <label class="text-sm text-gray-400">Remaining Capacity</label>
-            <input v-model.number="event.remainingCapacity" type="number" class="input-box" required />
+            <input v-model.number="event.remainingCapacity" type="number" placeholder="e.g. 100" class="input-box" required />
           </div>
         </div>
-
-        <!-- ✅ Submit Button -->
-        <button
-          type="submit"
-          class="mt-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all"
-        >
+        <button type="submit" class="mt-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all">
           <font-awesome-icon :icon="['fas', 'plus']" class="mr-2" /> Create Event
         </button>
       </form>
@@ -199,18 +147,34 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, nextTick } from "vue";
+import { useRouter } from 'vue-router';
+import L from 'leaflet';
+import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from "axios";
+
+// Font Awesome Setup
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 library.add(fas);
 
+// --- FIX FOR LEAFLET ICON PATHS IN VITE ---
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
+// --- COMPONENT STATE ---
+const router = useRouter();
 const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
-const dropdownOpen = ref(false);
-
 const userDetails = ref(JSON.parse(localStorage.getItem("user") || "{}"));
+const dropdownOpen = ref(false);
+let map = null;
+let marker = null;
 const event = ref({
   title: "",
   description: "",
@@ -218,54 +182,190 @@ const event = ref({
   latitude: "",
   longitude: "",
   amount: 0,
-  capacity: 0,
+  capacity: 100,
   status: "ACTIVE",
   eventDate: "",
   eventTime: "",
-  remainingCapacity: 0,
+  remainingCapacity: 100,
 });
 
-const applyTheme = () => {
-  document.documentElement.classList.toggle("dark", theme.value === "dark");
-  localStorage.setItem("theme", theme.value);
-};
-const toggleTheme = () => {
-  theme.value = theme.value === "dark" ? "light" : "dark";
+// --- LIFECYCLE HOOK ---
+onMounted(() => {
   applyTheme();
-};
-applyTheme();
+  nextTick(() => { // Wait for the DOM to be ready
+    initMap();
+  });
+});
 
+// --- MAP LOGIC ---
+const initMap = () => {
+  if (map) return;
+  map = L.map('map-container').setView([20.5937, 78.9629], 5);
+  updateMapTiles();
+
+  const provider = new OpenStreetMapProvider();
+  const searchControl = new GeoSearchControl({
+    provider: provider,
+    style: 'bar',
+    showMarker: false,
+    autoClose: true,
+  });
+  map.addControl(searchControl);
+
+  map.on('click', onMapClick);
+  map.on('geosearch/showlocation', onSearchResult);
+
+  setTimeout(() => map.invalidateSize(), 100);
+};
+
+const updateMapTiles = () => {
+    if(!map) return;
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+            map.removeLayer(layer);
+        }
+    });
+    const tileUrl = theme.value === 'dark'
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    L.tileLayer(tileUrl, { maxZoom: 19, attribution: '© OpenStreetMap & © CARTO' }).addTo(map);
+}
+
+const onMapClick = (e) => updateLocation(e.latlng);
+const onSearchResult = (e) => updateLocation({ lat: e.location.y, lng: e.location.x });
+
+const updateLocation = (latLng) => {
+  const { lat, lng } = latLng;
+  event.value.latitude = lat.toFixed(6);
+  event.value.longitude = lng.toFixed(6);
+  if (marker) {
+    marker.setLatLng(latLng);
+  } else {
+    marker = L.marker(latLng).addTo(map);
+  }
+  map.setView(latLng, 13);
+};
+
+// --- API & FORM LOGIC ---
 const createEvent = async () => {
   try {
     const token = localStorage.getItem("token");
+    if (!token) {
+      alert("You must be logged in to create an event.");
+      router.push('/auth');
+      return;
+    }
+    const eventTimestamp = `${event.value.eventDate}T${event.value.eventTime}`;
 
-    await axios.post("http://localhost:8080/api/events/create", event.value, {
+    // 2. Build the exact payload that the Spring Boot backend @RequestBody expects.
+    // This payload matches the fields in your Event.java entity.
+    const payload = {
+      title: event.value.title,
+      description: event.value.description,
+      location: event.value.location,
+      latitude: event.value.latitude,
+      longitude: event.value.longitude,
+      amount: event.value.amount,
+      capacity: event.value.capacity, 
+      status: event.value.status,
+      eventTimestamp: eventTimestamp, // The new combined timestamp field
+    };
+    // ------------------------------------
+
+    // 3. Send the request to the correct endpoint
+    await axios.post("http://localhost:8080/api/events", payload, {
       headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // ✅ include the token
+        Authorization: `Bearer ${token}`,
       },
     });
 
     alert("🎉 Event created successfully!");
-    window.location.href = "/events";
+    router.push("/myevents"); // Redirect to a relevant page after creation
+
   } catch (err) {
-    console.error("Error creating event:", err);
-    alert("Failed to create event.");
+    console.error("Error creating event:", err.response?.data || err.message);
+    alert("Failed to create event. Please check the form and try again. See console for details.");
   }
 };
 
+// --- THEME & NAVBAR LOGIC ---
+const applyTheme = () => {
+  document.documentElement.classList.toggle("dark", theme.value === "dark");
+  localStorage.setItem("theme", theme.value);
+};
 
-const toggleDropdown = () => (dropdownOpen.value = !dropdownOpen.value);
+const toggleTheme = () => {
+  theme.value = theme.value === "dark" ? "light" : "dark";
+  applyTheme();
+  updateMapTiles(); // Update map tiles when theme changes
+};
+
+const toggleDropdown = () => dropdownOpen.value = !dropdownOpen.value;
+
 const logout = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("user");
   loggedIn.value = false;
-  dropdownOpen.value = false;
-  userDetails.value = {};
-  window.location.href = "/auth";
+  router.push("/auth");
 };
 </script>
 
+<style>
+/* --- Styles for Leaflet Search Bar --- */
+.leaflet-control-geosearch a.reset {
+    color: #cbd5e0; /* Gray for dark theme */
+}
+
+.geosearch.leaflet-bar a,
+.geosearch.leaflet-bar a:hover {
+    border: none;
+    border-radius: 6px;
+}
+.geosearch.leaflet-bar .search-button:before,
+.geosearch.leaflet-bar .search-button:after {
+    display: none; /* Hide the default magnifier if you prefer Font Awesome */
+}
+
+.geosearch.leaflet-bar form {
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.geosearch.leaflet-bar form input {
+    color: inherit;
+    background-color: transparent;
+    border: none;
+}
+.geosearch.leaflet-bar form input:focus {
+    outline: none;
+}
+
+.geosearch .results {
+    border-radius: 8px;
+    margin-top: 5px;
+    background: #1f2937; /* A dark gray background */
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.geosearch .results > .active,
+.geosearch .results > :hover {
+    background-color: rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.3);
+}
+
+.leaflet-bar a {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.leaflet-bar a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+</style>
+
 <style scoped>
+/* All your beautiful, existing component-specific styles go here */
 .input-box {
   width: 100%;
   background-color: rgba(255, 255, 255, 0.08);

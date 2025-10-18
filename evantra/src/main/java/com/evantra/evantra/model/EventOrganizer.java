@@ -1,57 +1,38 @@
 package com.evantra.evantra.model;
 
 import jakarta.persistence.*;
-import java.io.Serializable;
-import java.util.UUID;
+import lombok.Getter;
+import lombok.Setter;
+import java.time.OffsetDateTime;
 
+@Getter
+@Setter
 @Entity
-@IdClass(EventOrganizerId.class)
-@Table(name = "event_organizers") // adjust table name if needed
-public class EventOrganizer implements Serializable {
+@Table(name = "Event_Organizers")
+@IdClass(EventOrganizerId.class) // This points to the class above
+public class EventOrganizer {
 
+    // --- THIS FIELD MUST BE NAMED 'event' ---
     @Id
-    @Column(name = "event_id", nullable = false)
-    private UUID eventId;  // Must match EventOrganizerId
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "event_id")
+    private Event event;
+    // ------------------------------------
 
+    // --- THIS FIELD MUST BE NAMED 'user' ---
     @Id
-    @Column(name = "organizer_id", nullable = false)
-    private UUID organizerId; // Must match EventOrganizerId
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+    // ------------------------------------
 
-    // Additional fields
-    @Column(name = "role")
     private String role;
 
-    // Constructors
-    public EventOrganizer() {}
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
 
-    public EventOrganizer(UUID eventId, UUID organizerId, String role) {
-        this.eventId = eventId;
-        this.organizerId = organizerId;
-        this.role = role;
-    }
-
-    // Getters and Setters
-    public UUID getEventId() {
-        return eventId;
-    }
-
-    public void setEventId(UUID eventId) {
-        this.eventId = eventId;
-    }
-
-    public UUID getOrganizerId() {
-        return organizerId;
-    }
-
-    public void setOrganizerId(UUID organizerId) {
-        this.organizerId = organizerId;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
+    @PrePersist
+    protected void onCreate() {
+        createdAt = OffsetDateTime.now();
     }
 }

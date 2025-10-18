@@ -1,32 +1,42 @@
 package com.evantra.evantra.model;
 
 import java.io.Serializable;
+import java.util.Objects;
 import java.util.UUID;
 
 public class EventOrganizerId implements Serializable {
 
-    private UUID eventId;
-    private UUID organizerId;
+    // --- THIS IS THE FIX ---
+    // The names here MUST match the @Id fields in EventOrganizer.java
+    // The type MUST be the primary key type of the Event and User entities.
+    private UUID event;
+    private UUID user;
+    // -----------------------
 
-    // Default constructor
     public EventOrganizerId() {}
 
-    public EventOrganizerId(UUID eventId, UUID organizerId) {
-        this.eventId = eventId;
-        this.organizerId = organizerId;
+    public EventOrganizerId(UUID event, UUID user) {
+        this.event = event;
+        this.user = user;
     }
 
-    // equals() and hashCode() — required for IdClass
+    // equals() and hashCode() are essential
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof EventOrganizerId)) return false;
+        if (o == null || getClass() != o.getClass()) return false;
         EventOrganizerId that = (EventOrganizerId) o;
-        return eventId.equals(that.eventId) && organizerId.equals(that.organizerId);
+        return Objects.equals(event, that.event) && Objects.equals(user, that.user);
     }
 
     @Override
     public int hashCode() {
-        return eventId.hashCode() ^ organizerId.hashCode();
+        return Objects.hash(event, user);
     }
+    
+    // Getters and Setters
+    public UUID getEvent() { return event; }
+    public void setEvent(UUID event) { this.event = event; }
+    public UUID getUser() { return user; }
+    public void setUser(UUID user) { this.user = user; }
 }

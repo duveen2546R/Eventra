@@ -367,39 +367,31 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   if (validateRegisterForm()) {
     try {
-      const response = await axios.post("/api/auth/register", {
+      const payload = {
         name: registerForm.value.name,
         email: registerForm.value.email,
         dob: registerForm.value.dob,
         gender: registerForm.value.gender,
         phoneNo: registerForm.value.phone,
         password: registerForm.value.password,
-      });
+      };
 
-      const data = response.data;
+      await axios.post("/api/auth/register", payload);
 
-      const token = data.jwt || data.token;
-      const message = data.message || "Registration successful!";
+      showAlert("Registration successful! Please sign in to continue.", "success");
 
-      if (token) {
-        localStorage.setItem("token", token);
-      }
+      isRegister.value = false;
 
-      // Save user data if returned
-      if (data.userData) {
-        localStorage.setItem("user", JSON.stringify(data.userData));
-      }
+      loginForm.value.email = registerForm.value.email;
+      loginForm.value.password = ""; // Clear the password field for security
 
-      showAlert(message, "success");
-      router.push("/home");
+
     } catch (error) {
       console.error("Registration error:", error);
-
       const message =
         error.response?.data?.message ||
         error.response?.data ||
-        "Registration failed. Please try again.";
-
+        "Registration failed. The email may already be in use.";
       showAlert(message, "error");
     }
   }
