@@ -34,10 +34,11 @@ public class SecurityConfig {
                 // --- THIS IS THE NEW RULE ---
                 // Allow anyone to view events (GET requests)
                 .requestMatchers(HttpMethod.GET, "/api/events", "/api/events/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/event-participants/**").permitAll()
                 // -------------------------
 
                 // Any other request (like POSTing a new event) must be authenticated
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 

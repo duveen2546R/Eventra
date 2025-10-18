@@ -14,18 +14,31 @@ public class Payment {
     @Column(name = "payment_id")  // ✅ match schema
     private UUID paymentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reg_id")  // ✅ matches schema (FK → event_participants.participant_id)
-    private EventParticipant registration;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "event_id")
+    private Event event;
 
     @Column(name = "amount")
     private BigDecimal amount;
 
+    @Column(name = "currency")
+    private String currency;
+
     @Column(name = "status")
     private String status;
 
-    @Column(name = "transaction_ref")
-    private String transactionRef;
+    @Column(name = "razorpay_payment_id")
+    private String razorpayPaymentId;
+
+    @Column(name = "razorpay_order_id")
+    private String razorpayOrderId;
+
+    @Column(name = "razorpay_signature")
+    private String razorpaySignature;
 
     @Column(name = "paid_at", nullable = false, updatable = false)
     private OffsetDateTime paidAt;
@@ -39,17 +52,29 @@ public class Payment {
     public UUID getPaymentId() { return paymentId; }
     public void setPaymentId(UUID paymentId) { this.paymentId = paymentId; }
 
-    public EventParticipant getRegistration() { return registration; }
-    public void setRegistration(EventParticipant registration) { this.registration = registration; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public Event getEvent() { return event; }
+    public void setEvent(Event event) { this.event = event; }
 
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
 
+    public String getCurrency() { return currency; }
+    public void setCurrency(String currency) { this.currency = currency; }
+
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getTransactionRef() { return transactionRef; }
-    public void setTransactionRef(String transactionRef) { this.transactionRef = transactionRef; }
+    public String getRazorpayPaymentId() { return razorpayPaymentId; }
+    public void setRazorpayPaymentId(String razorpayPaymentId) { this.razorpayPaymentId = razorpayPaymentId; }
+
+    public String getRazorpayOrderId() { return razorpayOrderId; }
+    public void setRazorpayOrderId(String razorpayOrderId) { this.razorpayOrderId = razorpayOrderId; }
+
+    public String getRazorpaySignature() { return razorpaySignature; }
+    public void setRazorpaySignature(String razorpaySignature) { this.razorpaySignature = razorpaySignature; }
 
     public OffsetDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(OffsetDateTime paidAt) { this.paidAt = paidAt; }

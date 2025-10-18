@@ -94,17 +94,18 @@
           Track your event payments and transaction history.
         </p>
 
-        <!-- 💠 Payment Cards -->
-        <div v-if="payments.length > 0" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Payments Received -->
+        <h2 class="text-3xl font-bold text-purple-400 mb-6">Payments Received</h2>
+        <div v-if="payments.received.length > 0" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           <div
-            v-for="payment in payments"
-            :key="payment.id"
+            v-for="payment in payments.received"
+            :key="payment.paymentId"
             class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-xl hover:scale-105 transition-all duration-300 hover:shadow-2xl"
           >
             <div class="flex items-center justify-between mb-4">
               <h3 class="text-xl font-semibold text-purple-300 flex items-center gap-2">
                 <font-awesome-icon :icon="['fas', 'calendar-check']" />
-                {{ payment.eventName }}
+                {{ payment.event.title }} (Received)
               </h3>
               <span
                 class="px-3 py-1 rounded-full text-xs font-medium"
@@ -127,22 +128,68 @@
               <p>
                 <font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" />
                 Date:
-                <span class="text-white">{{ new Date(payment.date).toLocaleString() }}</span>
+                <span class="text-white">{{ new Date(payment.paidAt).toLocaleString() }}</span>
               </p>
               <p>
                 <font-awesome-icon :icon="['fas', 'id-card']" class="text-purple-400" />
                 Payment ID:
-                <span class="text-gray-300 text-xs">{{ payment.id }}</span>
+                <span class="text-gray-300 text-xs">{{ payment.paymentId }}</span>
               </p>
             </div>
           </div>
         </div>
-
-        <!-- 🔔 No Payments -->
-        <div v-else class="text-center text-gray-400 py-24">
+        <div v-else class="text-center text-gray-400 py-10 mb-12">
           <font-awesome-icon :icon="['fas', 'info-circle']" class="text-4xl mb-4 text-purple-400 animate-pulse" />
-          <p class="text-lg">No payment records found.</p>
-          <p class="text-sm text-gray-500 mt-2">Your payment history will appear here once you make an event payment.</p>
+          <p class="text-lg">No payments received yet.</p>
+        </div>
+
+        <!-- Payments Made -->
+        <h2 class="text-3xl font-bold text-purple-400 mb-6">Payments Made</h2>
+        <div v-if="payments.made.length > 0" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div
+            v-for="payment in payments.made"
+            :key="payment.paymentId"
+            class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-xl hover:scale-105 transition-all duration-300 hover:shadow-2xl"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-purple-300 flex items-center gap-2">
+                <font-awesome-icon :icon="['fas', 'calendar-check']" />
+                {{ payment.event.title }} (Made)
+              </h3>
+              <span
+                class="px-3 py-1 rounded-full text-xs font-medium"
+                :class="{
+                  'bg-green-500/20 text-green-400': payment.status === 'SUCCESS',
+                  'bg-yellow-500/20 text-yellow-400': payment.status === 'PENDING',
+                  'bg-red-500/20 text-red-400': payment.status === 'FAILED'
+                }"
+              >
+                {{ payment.status }}
+              </span>
+            </div>
+
+            <div class="text-sm text-gray-400 space-y-2">
+              <p>
+                <font-awesome-icon :icon="['fas', 'money-bill-wave']" class="text-purple-400" />
+                Amount:
+                <span class="text-white font-semibold">₹{{ payment.amount.toFixed(2) }}</span>
+              </p>
+              <p>
+                <font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" />
+                Date:
+                <span class="text-white">{{ new Date(payment.paidAt).toLocaleString() }}</span>
+              </p>
+              <p>
+                <font-awesome-icon :icon="['fas', 'id-card']" class="text-purple-400" />
+                Payment ID:
+                <span class="text-gray-300 text-xs">{{ payment.paymentId }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center text-gray-400 py-10">
+          <font-awesome-icon :icon="['fas', 'info-circle']" class="text-4xl mb-4 text-purple-400 animate-pulse" />
+          <p class="text-lg">No payments made yet.</p>
         </div>
       </template>
 
@@ -172,7 +219,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted } from "vue";
 import axios from "axios";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
@@ -183,7 +230,7 @@ const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
 const dropdownOpen = ref(false);
 const userName = ref("");
-const payments = ref([]);
+const payments = reactive({ made: [], received: [] });
 
 const applyTheme = () => {
   document.documentElement.classList.toggle("dark", theme.value === "dark");
@@ -210,8 +257,16 @@ onMounted(async () => {
 
   if (loggedIn.value) {
     try {
-      const response = await axios.get("http://localhost:8080/api/payments");
-      payments.value = response.data || [];
+      const token = localStorage.getItem("token");
+      const userId = JSON.parse(localStorage.getItem("user")).user_id;
+      const response = await axios.get("/api/payments", {
+        params: { userId },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      payments.made = response.data.madePayments || [];
+      payments.received = response.data.receivedPayments || [];
     } catch (err) {
       console.error("Error fetching payments:", err);
     }

@@ -111,13 +111,29 @@
 
       <!-- Example Dashboard Cards -->
       <div class="grid md:grid-cols-3 gap-8">
-        <div v-for="card in dashboardCards" :key="card.title" class="feature-card">
+        <router-link to="/myevents?role=participant&tab=upcoming" class="feature-card">
           <div class="icon">
-            <font-awesome-icon :icon="card.icon" />
+            <font-awesome-icon :icon="['fas', 'calendar-check']" />
           </div>
-          <h4>{{ card.title }}</h4>
-          <p>{{ card.text }}</p>
-        </div>
+          <h4>Upcoming Events</h4>
+          <p>Stay updated with your upcoming schedules.</p>
+        </router-link>
+
+        <router-link to="/myevents?role=organizer" class="feature-card">
+          <div class="icon">
+            <font-awesome-icon :icon="['fas', 'users']" />
+          </div>
+          <h4>Your Team</h4>
+          <p>Collaborate with your event partners and co-hosts.</p>
+        </router-link>
+
+        <router-link to="/insights" class="feature-card">
+          <div class="icon">
+            <font-awesome-icon :icon="['fas', 'chart-line']" />
+          </div>
+          <h4>Insights</h4>
+          <p>Track your event performance and analytics easily.</p>
+        </router-link>
       </div>
     </main>
 

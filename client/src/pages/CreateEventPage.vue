@@ -273,7 +273,7 @@ const createEvent = async () => {
     // ------------------------------------
 
     // 3. Send the request to the correct endpoint
-    await axios.post("http://localhost:8080/api/events", payload, {
+    await axios.post("/api/events", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -312,55 +312,46 @@ const logout = () => {
 
 <style>
 /* --- Styles for Leaflet Search Bar --- */
-.leaflet-control-geosearch a.reset {
-    color: #cbd5e0; /* Gray for dark theme */
+.leaflet-control-geosearch {
+  position: absolute !important;
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 9999 !important;
 }
 
-.geosearch.leaflet-bar a,
-.geosearch.leaflet-bar a:hover {
-    border: none;
-    border-radius: 6px;
-}
-.geosearch.leaflet-bar .search-button:before,
-.geosearch.leaflet-bar .search-button:after {
-    display: none; /* Hide the default magnifier if you prefer Font Awesome */
+.geosearch form {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  padding: 4px 8px !important;
 }
 
-.geosearch.leaflet-bar form {
-    border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(168, 85, 247, 0.3);
+.geosearch input {
+  background: transparent !important;
+  color: #111 !important;
+  font-size: 14px !important;
+  width: 200px !important;
 }
 
-.geosearch.leaflet-bar form input {
-    color: inherit;
-    background-color: transparent;
-    border: none;
+.dark .geosearch form {
+  background: rgba(30, 30, 30, 0.9) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
 }
-.geosearch.leaflet-bar form input:focus {
-    outline: none;
+
+.dark .geosearch input {
+  color: #f5f5f5 !important;
 }
 
 .geosearch .results {
-    border-radius: 8px;
-    margin-top: 5px;
-    background: #1f2937; /* A dark gray background */
-    border: 1px solid rgba(168, 85, 247, 0.3);
-    backdrop-filter: blur(10px);
+  background: rgba(30, 30, 30, 0.95) !important;
+  color: #fff !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
 }
-
-.geosearch .results > .active,
-.geosearch .results > :hover {
-    background-color: rgba(168, 85, 247, 0.2);
-    border-color: rgba(168, 85, 247, 0.3);
-}
-
-.leaflet-bar a {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-}
-.leaflet-bar a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.light .geosearch .results {
+  background: #fff !important;
+  color: #111 !important;
 }
 </style>
 

@@ -17,11 +17,11 @@ public class EventParticipant {
     @Column(name = "participant_id")  // ✅ matches schema
     private UUID participantId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "event_id")  // ✅ FK → events.event_id
     private Event event;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")  // ✅ FK → users.user_id
     private User user;
 

@@ -155,8 +155,8 @@
             <p class="text-gray-400 text-sm max-w-md line-clamp-2">{{ event.description }}</p>
             <div class="flex gap-6 text-sm mt-2">
               <p><font-awesome-icon :icon="['fas', 'map-marker-alt']" class="text-purple-400" /> {{ event.location }}</p>
-              <p><font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> {{ formatDate(event.eventDate) }}</p>
-              <p><font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" /> {{ event.eventTime || 'TBA' }}</p>
+              <p><font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> {{ formatDate(event.eventTimestamp) }}</p>
+              <p><font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" /> {{ formatTime(event.eventTimestamp) }}</p>
             </div>
           </div>
 
@@ -204,6 +204,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import axios from "axios";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
@@ -214,10 +215,10 @@ const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
 const dropdownOpen = ref(false);
 const userDetails = ref(JSON.parse(localStorage.getItem("user") || "{}"));
-
-const viewRole = ref("organizer");
+const route = useRoute();
+const viewRole = ref(route.query.role || "organizer");
 const searchQuery = ref("");
-const currentTab = ref("ongoing");
+const currentTab = ref(route.query.tab || "ongoing");
 
 const tabs = [
   { key: "ongoing", label: "Ongoing" },
@@ -255,9 +256,9 @@ const setRole = (role) => {
 const fetchEvents = async () => {
   try {
     const userId = userDetails.value?.user_id;
-    const res = await axios.get(
-      `http://localhost:8080/api/events/mine?userId=${userId}&role=${viewRole.value}`
-    );
+const res = await axios.get("/api/events/mine", {
+      params: { userId, role: viewRole.value },
+    });
     categorize(res.data);
   } catch (err) {
     console.error("Error fetching events:", err);
@@ -271,7 +272,7 @@ const categorize = (allEvents) => {
   const past = [];
 
   allEvents.forEach((e) => {
-    const eventDate = new Date(e.eventDate + "T" + (e.eventTime || "00:00"));
+    const eventDate = new Date(e.eventTimestamp);
     if (eventDate.toDateString() === now.toDateString()) ongoing.push(e);
     else if (eventDate > now) upcoming.push(e);
     else past.push(e);
@@ -302,12 +303,15 @@ onMounted(() => {
 const formatDate = (date) =>
   new Date(date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 
+const formatTime = (date) =>
+  new Date(date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+
 const displayAmount = (amt) => (amt > 0 ? `₹${amt}` : "Free");
 
 const editEvent = (e) => (window.location.href = `/create?eventId=${e.eventId}`);
 const deleteEvent = async (e) => {
   if (!confirm("Are you sure you want to delete this event?")) return;
-  await axios.delete(`http://localhost:8080/api/events/${e.eventId}`);
+  await axios.delete(`/api/events/${e.eventId}`);
   fetchEvents();
 };
 

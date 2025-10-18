@@ -9,20 +9,19 @@ import java.time.OffsetDateTime;
 @Setter
 @Entity
 @Table(name = "Event_Organizers")
-@IdClass(EventOrganizerId.class) // This points to the class above
 public class EventOrganizer {
 
-    // --- THIS FIELD MUST BE NAMED 'event' ---
-    @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "event_id")
-    private Event event;
-    // ------------------------------------
+    @EmbeddedId
+    private EventOrganizerId id;
 
-    // --- THIS FIELD MUST BE NAMED 'user' ---
-    @Id
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @MapsId("eventId") // This maps the eventId from the EmbeddedId to this ManyToOne relationship
+    @JoinColumn(name = "event_id", insertable = false, updatable = false)
+    private Event event;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @MapsId("userId") // This maps the userId from the EmbeddedId to this ManyToOne relationship
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
     // ------------------------------------
 

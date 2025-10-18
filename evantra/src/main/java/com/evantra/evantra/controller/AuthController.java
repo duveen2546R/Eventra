@@ -49,27 +49,7 @@ public class AuthController {
             // Send welcome email asynchronously
             new Thread(() -> emailService.sendWelcomeEmail(savedUser)).start();
 
-            // Auto-login after registration
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(registerRequest.getEmail(), registerRequest.getPassword())
-            );
-
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String jwt = jwtUtil.generateToken(userDetails);
-
-            Map<String, Object> userData = new HashMap<>();
-            userData.put("user_id", savedUser.getUserId());
-            userData.put("name", savedUser.getName());
-            userData.put("email", savedUser.getEmail());
-            userData.put("phone_no", savedUser.getPhoneNo());
-            userData.put("gender", savedUser.getGender());
-            userData.put("dob", savedUser.getDob());
-
-            AuthResponse response = new AuthResponse(jwt);
-            response.setMessage("Registration successful!");
-            response.setUserData(userData);
-
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok("Registration successful! Please log in.");
 
         } catch (Exception e) {
             e.printStackTrace();

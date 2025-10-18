@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.security.Principal;
+import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ public class EventController {
     @Autowired private UserRepository userRepository;
     @Autowired private EventParticipantRepository eventParticipantRepository;
     @Autowired private EventOrganizerRepository eventOrganizerRepository; // For the "My Events" feature
+    @Autowired private PaymentRepository paymentRepository; // For creating payment records
 
     // ===================================================================
     // = PUBLIC & GENERAL EVENT ENDPOINTS
@@ -54,10 +57,19 @@ public class EventController {
     // ===================================================================
     
     @PostMapping
-    public Event createEvent(@RequestBody Event event) {
-        // NOTE: A more robust implementation would link the organizer automatically
-        // based on the logged-in user from the JWT token.
-        return eventRepository.save(event);
+    public Event createEvent(@RequestBody Event event, Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow(
+                () -> new RuntimeException("User not found. Please ensure you are logged in."));
+
+        Event savedEvent = eventRepository.save(event);
+
+        EventOrganizer eventOrganizer = new EventOrganizer();
+        eventOrganizer.setEvent(savedEvent);
+        eventOrganizer.setUser(user);
+        eventOrganizer.setRole("organizer");
+        eventOrganizerRepository.save(eventOrganizer);
+
+        return savedEvent;
     }
     
     @PutMapping("/{id}")
@@ -164,6 +176,7 @@ public class EventController {
             Map<String, String> response = new HashMap<>();
             response.put("order_id", order.get("id"));
             response.put("amount", order.get("amount").toString());
+            response.put("key", razorpayProperties.getId());
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -187,6 +200,19 @@ public class EventController {
 
             User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
             Event event = eventRepository.findById(request.getEventId()).orElseThrow(() -> new RuntimeException("Event not found"));
+
+            // Create and save the payment record
+            Payment payment = new Payment();
+            payment.setRazorpayPaymentId(request.getRazorpay_payment_id());
+            payment.setRazorpayOrderId(request.getRazorpay_order_id());
+            payment.setRazorpaySignature(request.getRazorpay_signature());
+            payment.setAmount(event.getAmount());
+            payment.setCurrency("INR");
+            payment.setStatus("SUCCESS");
+            payment.setUser(user);
+            payment.setEvent(event);
+            payment.setPaidAt(OffsetDateTime.now());
+            paymentRepository.save(payment);
 
             EventParticipant participant = eventRegistrationService.finalizeRegistration(
                     user, event, request.getRazorpay_order_id(), request.getRazorpay_payment_id());

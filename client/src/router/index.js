@@ -7,6 +7,8 @@ import EventsPage from "../pages/EventsPage.vue";
 import MyEventsPage from "../pages/MyEventsPage.vue";
 import PaymentsPage from "../pages/PaymentsPage.vue";
 import CreateEventPage from "@/pages/CreateEventPage.vue";
+import EventDetailsPage from "@/pages/EventDetailsPage.vue";
+import InsightsPage from "@/pages/InsightsPage.vue";
 
 const routes = [
   {
@@ -23,6 +25,11 @@ const routes = [
     path: "/events",
     name: "EventsPage",
     component: EventsPage,
+  },
+  {
+    path: "/events/:id",
+    name: "EventDetailsPage",
+    component: EventDetailsPage,
   },
   {
     path: "/myevents",
@@ -43,6 +50,11 @@ const routes = [
     path: "/create",
     name: "CreateEventPage",
     component: CreateEventPage,
+  },
+  {
+    path: "/insights",
+    name: "InsightsPage",
+    component: InsightsPage,
   }
 ];
 

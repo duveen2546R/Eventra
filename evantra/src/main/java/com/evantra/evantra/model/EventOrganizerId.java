@@ -1,23 +1,26 @@
 package com.evantra.evantra.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
 
+@Embeddable
 public class EventOrganizerId implements Serializable {
 
-    // --- THIS IS THE FIX ---
-    // The names here MUST match the @Id fields in EventOrganizer.java
-    // The type MUST be the primary key type of the Event and User entities.
-    private UUID event;
-    private UUID user;
-    // -----------------------
+    @Column(name = "event_id")
+    private UUID eventId;
+
+    @Column(name = "user_id")
+    private UUID userId;
 
     public EventOrganizerId() {}
 
-    public EventOrganizerId(UUID event, UUID user) {
-        this.event = event;
-        this.user = user;
+    public EventOrganizerId(UUID eventId, UUID userId) {
+        this.eventId = eventId;
+        this.userId = userId;
     }
 
     // equals() and hashCode() are essential
@@ -26,17 +29,17 @@ public class EventOrganizerId implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         EventOrganizerId that = (EventOrganizerId) o;
-        return Objects.equals(event, that.event) && Objects.equals(user, that.user);
+        return Objects.equals(eventId, that.eventId) && Objects.equals(userId, that.userId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(event, user);
+        return Objects.hash(eventId, userId);
     }
     
     // Getters and Setters
-    public UUID getEvent() { return event; }
-    public void setEvent(UUID event) { this.event = event; }
-    public UUID getUser() { return user; }
-    public void setUser(UUID user) { this.user = user; }
+    public UUID getEventId() { return eventId; }
+    public void setEventId(UUID eventId) { this.eventId = eventId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
 }

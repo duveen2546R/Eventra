@@ -119,7 +119,8 @@
               <h3 class="text-xl font-semibold text-purple-300">{{ event.title }}</h3>
               <p class="text-gray-400 text-sm max-w-md">{{ event.description }}</p>
               <div class="flex gap-8 text-sm mt-2">
-                <p><font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> {{ formatDate(event.date) }}</p>
+                <p><font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> {{ formatDate(event.eventTimestamp) }}</p>
+                <p><font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" /> {{ formatTime(event.eventTimestamp) }}</p>
                 <p>
                   <font-awesome-icon :icon="['fas', 'tag']" class="text-purple-400" />
                   <span class="text-purple-400 font-semibold">
@@ -208,7 +209,7 @@ onMounted(async () => {
 
   if (loggedIn.value) {
     try {
-      const response = await axios.get("http://localhost:8080/api/events");
+      const response = await axios.get("/api/events");
       events.value = response.data || [];
     } catch (err) {
       console.error("Error fetching events:", err);
@@ -222,6 +223,12 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
 };
 
+const formatTime = (dateStr) => {
+  if (!dateStr) return "TBA";
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+};
+
 const registerEvent = async (event) => {
   if (!loggedIn.value) {
     alert("Please log in to register for this event.");
@@ -231,10 +238,23 @@ const registerEvent = async (event) => {
 
   const user = userDetails.value;
 
+  // Check if user is already registered
+  try {
+    const isRegisteredResponse = await axios.get(`/api/event-participants/is-registered/${event.eventId}/${user.user_id}`);
+    if (isRegisteredResponse.data) {
+      alert("You are already registered for this event!");
+      return;
+    }
+  } catch (err) {
+    console.error("Error checking registration status:", err);
+    alert("Failed to check registration status. Please try again.");
+    return;
+  }
+
   if (event.amount <= 0) {
     // Free event
     try {
-      await axios.post(`http://localhost:8080/api/events/${event.eventId}/register-free`, {
+      await axios.post(`/api/events/${event.eventId}/register-free`, {
         userId: user.user_id,
       });
       alert("Successfully registered for free event!");
@@ -247,31 +267,45 @@ const registerEvent = async (event) => {
 
   // Paid event - Razorpay
   try {
-    const response = await axios.post(`http://localhost:8080/api/events/${event.eventId}/create-order`, {
+    const token = localStorage.getItem("token");
+    const response = await axios.post(`/api/events/${event.eventId}/create-order`, {
       userId: user.user_id,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
     const orderData = response.data;
+    console.log("Order data:", orderData);
 
     const options = {
-      key: "rzp_test_XXXXXXXXXXXXXX", // replace with your Razorpay key
+      key: orderData.key, // use the key from the backend
       amount: orderData.amount,
       currency: "INR",
       name: "Eventra",
       description: event.title,
       order_id: orderData.order_id,
       handler: async function (paymentResponse) {
-        await axios.post("http://localhost:8080/api/events/verify-payment", {
+        const token = localStorage.getItem("token");
+        await axios.post("/api/events/verify-payment", {
           userId: user.user_id,
           eventId: event.eventId,
           razorpay_order_id: paymentResponse.razorpay_order_id,
           razorpay_payment_id: paymentResponse.razorpay_payment_id,
           razorpay_signature: paymentResponse.razorpay_signature,
+        }, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
         alert("Payment successful! You are registered.");
+        window.location.href = "/myevents";
       },
       prefill: { name: user.name, email: user.email, contact: user.phone_no },
       theme: { color: "#9b5de5" },
     };
+
+    console.log("Razorpay options:", options);
 
     const razor = new window.Razorpay(options);
     razor.open();

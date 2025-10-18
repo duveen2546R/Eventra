@@ -76,7 +76,7 @@
         </router-link>
 
         <router-link
-          to="/signin"
+          to="/auth"
           class="px-6 md:px-8 py-3 rounded-full text-base md:text-lg font-semibold border border-purple-400/50 bg-white/10 hover:bg-purple-500/20 transition-all duration-300"
         >
           <font-awesome-icon :icon="['fas', 'sign-in-alt']" /> Get Started

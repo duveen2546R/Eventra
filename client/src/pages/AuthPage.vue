@@ -219,7 +219,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { useRouter } from 'vue-router';
 import axios from "axios";
 
-axios.defaults.baseURL = "http://localhost:8080";
+
 library.add(fas);
 
 const router = useRouter();
