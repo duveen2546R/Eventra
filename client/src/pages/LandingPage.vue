@@ -3,6 +3,14 @@
     class="relative min-h-screen w-screen transition-all duration-700"
     :class="theme === 'dark' ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-900'"
   >
+    <!-- Global Alert Component -->
+    <GlobalAlert 
+      v-model="alertState.show"
+      :message="alertState.message"
+      :type="alertState.type"
+      :duration="alertState.duration"
+    />
+
     <!-- 🌫 Moving Energy Light Background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="fog"></div>
@@ -23,18 +31,26 @@
 
       <div class="flex items-center gap-3 md:gap-6">
         <router-link
-          to="/home"
+          to="/events"
           class="hidden md:flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold hover:bg-purple-600/30 border border-purple-400/40 transition-all duration-300"
         >
           <font-awesome-icon :icon="['fas', 'calendar-alt']" /> Events
         </router-link>
 
+        <!-- Show Sign In button only when NOT signed in -->
         <router-link
+          v-if="!isSignedIn"
           to="/auth"
           class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 shadow-md hover:shadow-xl hover:scale-105 transition-all duration-300"
         >
           Sign In <font-awesome-icon :icon="['fas', 'arrow-right']" />
         </router-link>
+
+        <!-- Show user menu when signed in -->
+        <div v-else class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold border border-purple-400/40">
+          <font-awesome-icon :icon="['fas', 'user-circle']" />
+          <span class="hidden md:inline">Profile</span>
+        </div>
 
         <!-- Theme Toggle -->
         <button
@@ -70,51 +86,141 @@
       >
         <router-link
           to="/events"
+          @click="handleExploreEvents"
           class="px-6 md:px-8 py-3 rounded-full text-base md:text-lg font-semibold bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 hover:shadow-xl transition-all duration-300"
         >
           <font-awesome-icon :icon="['fas', 'compass']" /> Explore Events
         </router-link>
 
         <router-link
+          v-if="!isSignedIn"
           to="/auth"
+          @click="handleGetStarted"
           class="px-6 md:px-8 py-3 rounded-full text-base md:text-lg font-semibold border border-purple-400/50 bg-white/10 hover:bg-purple-500/20 transition-all duration-300"
         >
           <font-awesome-icon :icon="['fas', 'sign-in-alt']" /> Get Started
         </router-link>
       </Motion>
+
+      <!-- Features Section -->
+      <Motion
+        :initial="{ opacity: 0, y: 60 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ delay: 1.8, duration: 1.2 }"
+        class="mt-24 w-full max-w-7xl"
+      >
+        <h2 class="text-3xl md:text-4xl font-bold mb-12 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+          Why Choose Eventra?
+        </h2>
+        
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'calendar-check']" />
+            </div>
+            <h4>Easy Event Management</h4>
+            <p>Create, organize, and manage events with our intuitive interface</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'money-bill-wave']" />
+            </div>
+            <h4>Seamless Payments</h4>
+            <p>Integrated payment system for hassle-free event registrations</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'chart-line']" />
+            </div>
+            <h4>Detailed Insights</h4>
+            <p>Track your events and payments with beautiful analytics</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'map-marker-alt']" />
+            </div>
+            <h4>Location Mapping</h4>
+            <p>Interactive maps to help attendees find your events easily</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'users']" />
+            </div>
+            <h4>Participant Management</h4>
+            <p>Keep track of registrations and manage capacity effortlessly</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">
+              <font-awesome-icon :icon="['fas', 'mobile-alt']" />
+            </div>
+            <h4>Mobile Friendly</h4>
+            <p>Access Eventra anywhere, anytime on any device</p>
+          </div>
+        </div>
+      </Motion>
     </main>
 
     <!-- 🦶 Footer -->
-    <footer class="py-6 text-center text-gray-400 border-t border-purple-400/20 bg-transparent">
+    <footer class="py-16 mt-10 text-center text-gray-400 border-t border-purple-400/20 bg-transparent relative z-20">
       © {{ new Date().getFullYear() }} Eventra — Empower Your Events
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { Motion } from "@motionone/vue";
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
-// Assuming you have 'vue-router' installed and configured for router-link
-// If not, replace <router-link> with <a> tags or install vue-router.
+import GlobalAlert from '../components/GlobalAlert.vue';
+import { useAlert } from '../composables/useAlert';
 
-// Add all solid icons to the library
 library.add(fas);
 
+const { alertState, showSuccess, showInfo } = useAlert();
+
 const theme = ref(localStorage.getItem("theme") || "dark");
+
+// Check if user is signed in (you can replace this with your actual auth check)
+const isSignedIn = computed(() => {
+  // Replace with your actual authentication check
+  // For example: return !!localStorage.getItem('authToken');
+  // or use a Vuex/Pinia store
+  return !!localStorage.getItem('authToken');
+});
 
 const applyTheme = () => {
   document.documentElement.classList.toggle("dark", theme.value === "dark");
   localStorage.setItem("theme", theme.value);
 };
+
 const toggleTheme = () => {
   theme.value = theme.value === "dark" ? "light" : "dark";
   applyTheme();
+  showInfo(`Switched to ${theme.value} mode`, 1500);
 };
-onMounted(applyTheme);
 
+const handleExploreEvents = () => {
+  showInfo("Loading events...", 1000);
+};
+
+const handleGetStarted = () => {
+  showSuccess("Welcome to Eventra!", 1500);
+};
+
+onMounted(() => {
+  applyTheme();
+  // Welcome message on page load
+  setTimeout(() => {
+    showInfo("Welcome to Eventra! 🎉", 2000);
+  }, 500);
+});
 </script>
 
 <style>
@@ -131,13 +237,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure full height for HTML and body */
 html, body {
   height: 100%;
-}
-
-.text-accent {
-  color: #00c896; /* This accent color is from the first template, keeping it for consistency if needed */
 }
 
 /* ✨ Fog background */
@@ -158,7 +259,7 @@ html, body {
   top: -10%;
   width: 80%;
   height: 120%;
-  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%); /* Adjusted color for purple theme */
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%);
   filter: blur(160px);
   animation: lightShift 18s ease-in-out infinite alternate;
   mix-blend-mode: screen;
@@ -176,6 +277,7 @@ html, body {
   mix-blend-mode: screen;
   animation: sweep 12s ease-in-out infinite;
 }
+
 @keyframes sweep {
   0% { transform: translateX(80%); opacity: 0.05; }
   50% { transform: translateX(0%); opacity: 0.5; }
@@ -184,48 +286,45 @@ html, body {
 
 /* 🌀 Glow effect */
 @keyframes glow {
-  0%, 100% { text-shadow: 0 0 30px rgba(150, 0, 255, 0.3), 0 0 60px rgba(255, 0, 200, 0.2); } /* Adjusted for purple/pink glow */
-  50% { text-shadow: 0 0 50px rgba(180, 0, 255, 0.6), 0 0 80px rgba(255, 0, 220, 0.3); } /* Adjusted for purple/pink glow */
+  0%, 100% { text-shadow: 0 0 30px rgba(150, 0, 255, 0.3), 0 0 60px rgba(255, 0, 200, 0.2); }
+  50% { text-shadow: 0 0 50px rgba(180, 0, 255, 0.6), 0 0 80px rgba(255, 0, 220, 0.3); }
 }
-.animate-glow { animation: glow 4s ease-in-out infinite; }
 
-/* 🎞 Parallax fog for feature section */
-.parallax-fog {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.05), transparent 60%),
-              radial-gradient(circle at 40% 60%, rgba(150, 0, 255, 0.04), transparent 70%); /* Adjusted color */
-  filter: blur(80px);
-  animation: parallaxFogMove 25s ease-in-out infinite alternate;
-}
-@keyframes parallaxFogMove {
-  0% { transform: translate(0%, 0%) scale(1); }
-  100% { transform: translate(-10%, 8%) scale(1.2); }
+.animate-glow { 
+  animation: glow 4s ease-in-out infinite; 
 }
 
 /* Background movement */
-@keyframes fogMove { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 5%) scale(1.2); } }
-@keyframes lightShift { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 10%) scale(1.1); } }
+@keyframes fogMove { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 5%) scale(1.2); } 
+}
 
-/* 🌟 Enhanced Feature Card Styles */
+@keyframes lightShift { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 10%) scale(1.1); } 
+}
+
+/* 🌟 Enhanced Feature Card Styles - 3 Columns Grid */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2.5rem; /* Increased gap for better spacing */
-  margin-top: 4rem; /* Adjusted top margin */
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2.5rem;
+  margin-top: 2rem;
 }
 
 .feature-card {
   position: relative;
   overflow: hidden;
-  padding: 2.5rem; /* Slightly more padding */
-  border-radius: 1.5rem; /* More rounded corners */
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)); /* Subtle translucent background */
-  border: 1px solid rgba(150, 0, 255, 0.2); /* Soft purple border */
-  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1); /* Smoother, more pronounced transition */
-  backdrop-filter: blur(10px); /* Add blur for a frosted glass effect */
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(150, 0, 255, 0.2);
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  backdrop-filter: blur(10px);
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  text-align: center; /* Ensure content is centered */
+  text-align: center;
+  cursor: pointer;
 }
 
 .feature-card::before {
@@ -235,7 +334,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 70% 0%, rgba(200, 0, 255, 0.1), transparent 70%); /* Top-right light glow */
+  background: radial-gradient(circle at 70% 0%, rgba(200, 0, 255, 0.1), transparent 70%);
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
   mix-blend-mode: screen;
@@ -249,7 +348,7 @@ html, body {
   right: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle at 30% 100%, rgba(255, 0, 200, 0.1), transparent 70%); /* Bottom-left light glow */
+  background: radial-gradient(circle at 30% 100%, rgba(255, 0, 200, 0.1), transparent 70%);
   opacity: 0;
   transition: opacity 0.6s cubic-bezier(0.23, 1, 0.32, 1);
   mix-blend-mode: screen;
@@ -257,50 +356,54 @@ html, body {
 }
 
 .feature-card:hover {
-  transform: translateY(-10px) scale(1.03); /* More lift and slight scale */
-  border-color: rgba(200, 0, 255, 0.6); /* More prominent border on hover */
-  box-shadow: 0 15px 50px rgba(150, 0, 255, 0.4), 0 0 80px rgba(255, 0, 200, 0.2); /* Enhanced glow effect */
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); /* Slightly brighter background */
+  transform: translateY(-10px) scale(1.03);
+  border-color: rgba(200, 0, 255, 0.6);
+  box-shadow: 0 15px 50px rgba(150, 0, 255, 0.4), 0 0 80px rgba(255, 0, 200, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
 }
 
 .feature-card:hover::before,
 .feature-card:hover::after {
-  opacity: 1; /* Make glows visible on hover */
+  opacity: 1;
 }
 
 .feature-card .icon {
-  font-size: 4.5rem; /* Larger icons */
+  font-size: 4rem;
   margin-bottom: 1.5rem;
-  color: #c084fc; /* A vibrant purple for icons */
-  text-shadow: 0 0 20px rgba(150, 0, 255, 0.6); /* Icon glow */
-  transition: color 0.6s, text-shadow 0.6s;
+  color: #c084fc;
+  text-shadow: 0 0 20px rgba(150, 0, 255, 0.6);
+  transition: color 0.6s, text-shadow 0.6s, transform 0.6s;
   position: relative;
   z-index: 1;
 }
 
 .feature-card:hover .icon {
-  color: #f472b6; /* Pinker on hover */
+  color: #f472b6;
   text-shadow: 0 0 30px rgba(255, 0, 200, 0.8), 0 0 50px rgba(200, 0, 255, 0.6);
+  transform: scale(1.1) rotate(5deg);
 }
 
 .feature-card h4 {
-  font-size: 2.2rem; /* Larger title */
+  font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
-  color: darkorchid;
+  background: linear-gradient(to right, #c084fc, #f472b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   position: relative;
   z-index: 1;
 }
 
 .feature-card p {
-  font-size: 1.1rem; /* Slightly larger text */
+  font-size: 1rem;
   line-height: 1.8;
-  color: #ccc; /* Lighter gray for text */
+  color: #9ca3af;
   position: relative;
   z-index: 1;
 }
 
-/* Adjustments for dark theme specific styles if needed, otherwise these generally work for dark */
+/* Dark theme adjustments */
 .dark .feature-card {
   background: linear-gradient(135deg, rgba(22, 27, 34, 0.8), rgba(22, 27, 34, 0.5));
   border-color: rgba(150, 0, 255, 0.2);
@@ -312,9 +415,29 @@ html, body {
 }
 
 /* Responsive adjustments */
+@media (max-width: 1024px) {
+  .features-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .hero-section h1 {
-    font-size: 3rem; /* Smaller heading on mobile */
+  h1 {
+    font-size: 3rem !important;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .feature-card {
+    padding: 2rem;
+  }
+  
+  .feature-card .icon {
+    font-size: 3rem;
   }
 }
 </style>

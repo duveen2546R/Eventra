@@ -3,6 +3,14 @@
     class="relative min-h-screen w-screen flex flex-col transition-all duration-700"
     :class="theme === 'dark' ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-900'"
   >
+    <!-- Global Alert Component -->
+    <GlobalAlert 
+      v-model="alertState.show"
+      :message="alertState.message"
+      :type="alertState.type"
+      :duration="alertState.duration"
+    />
+
     <!-- 🌫 Background Fog & Light -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="fog"></div>
@@ -134,6 +142,7 @@
                 <CustomDatePicker 
                   v-model="registerForm.dob" 
                   :hasError="!!registerErrors.dob"
+                  placeholder="Date of Birth"
                 />
                 <p v-if="registerErrors.dob" class="error-message">{{ registerErrors.dob }}</p>
               </div>
@@ -198,17 +207,6 @@
       </div>
     </main>
 
-    <!-- Global Alert/Notification System -->
-    <div v-if="alert.message" :class="['alert-container', alert.type]">
-      <div class="alert-content">
-        <font-awesome-icon :icon="['fas', alert.icon]" class="alert-icon" />
-        <p class="alert-message">{{ alert.message }}</p>
-        <button @click="clearAlert" class="alert-close">
-          <font-awesome-icon :icon="['fas', 'times']" />
-        </button>
-      </div>
-    </div>
-
     <!-- 🦶 Footer -->
     <footer class="py-6 text-center text-gray-400 border-t border-purple-400/20 bg-transparent z-10">
       © {{ new Date().getFullYear() }} Eventra — Empower Your Events
@@ -224,14 +222,14 @@ import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { useRouter } from 'vue-router';
 import axios from "axios";
-import CustomDatePicker from './CustomDatePicker.vue';
-
-// Note: CustomDatePicker uses .auth-input class from parent component
-// Make sure the parent has these styles defined
+import CustomDatePicker from '../components/CustomDatePicker.vue';
+import GlobalAlert from '../components/GlobalAlert.vue';
+import { useAlert } from '../composables/useAlert.js';
 
 library.add(fas);
 
 const router = useRouter();
+const { alertState, showSuccess, showError, showWarning } = useAlert();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
 const isRegister = ref(false);
@@ -247,31 +245,6 @@ const toggleLoginPasswordVisibility = () => {
 const toggleRegisterPasswordVisibility = () => {
   showRegisterPassword.value = !showRegisterPassword.value;
 };
-
-// Alert system
-const alert = ref({
-  message: '',
-  type: '', // 'success', 'error', 'info'
-  icon: '',
-  timeout: null,
-});
-
-const showAlert = (message, type, duration = 3000) => {
-  clearTimeout(alert.value.timeout);
-  alert.value.message = message;
-  alert.value.type = type;
-  alert.value.icon = type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-circle' : 'info-circle');
-  alert.value.timeout = setTimeout(() => {
-    clearAlert();
-  }, duration);
-};
-
-const clearAlert = () => {
-  alert.value.message = '';
-  alert.value.type = '';
-  alert.value.icon = '';
-};
-
 
 // 🧾 Login form
 const loginForm = ref({
@@ -291,24 +264,23 @@ const registerForm = ref({
 });
 const registerErrors = ref({});
 
-
 const applyTheme = () => {
   document.documentElement.classList.toggle("dark", theme.value === "dark");
   localStorage.setItem("theme", theme.value);
 };
+
 const toggleTheme = () => {
   theme.value = theme.value === "dark" ? "light" : "dark";
   applyTheme();
 };
+
 onMounted(applyTheme);
 
 // 🧠 Logic
 const toggleAuthMode = () => {
   isRegister.value = !isRegister.value;
-  // Clear errors and alerts when switching modes
   loginErrors.value = {};
   registerErrors.value = {};
-  clearAlert();
 };
 
 const validateLoginForm = () => {
@@ -341,34 +313,25 @@ const handleLogin = async () => {
       });
 
       const data = response.data;
-
-      // Token might be named `jwt` in backend response
       const token = data.jwt || data.token;
       const message = data.message || "Login successful!";
 
       if (token) {
-        // Store token
         localStorage.setItem("token", token);
 
-        // Optionally store user details
         if (data.userData) {
           localStorage.setItem("user", JSON.stringify(data.userData));
         }
 
-        showAlert(message, "success");
-        router.push("/home");
+        showSuccess(message);
+        setTimeout(() => router.push("/home"), 1000);
       } else {
-        showAlert("Login succeeded but no token received.", "warning");
+        showWarning("Login succeeded but no token received.");
       }
     } catch (error) {
       console.error("Login error:", error);
-
-      const message =
-        error.response?.data?.message ||
-        error.response?.data ||
-        "Invalid email or password.";
-
-      showAlert(message, "error");
+      const message = error.response?.data?.message || error.response?.data || "Invalid email or password.";
+      showError(message);
     }
   }
 };
@@ -387,25 +350,21 @@ const handleRegister = async () => {
 
       await axios.post("/api/auth/register", payload);
 
-      showAlert("Registration successful! Please sign in to continue.", "success");
-
-      isRegister.value = false;
-
-      loginForm.value.email = registerForm.value.email;
-      loginForm.value.password = ""; // Clear the password field for security
-
+      showSuccess("Registration successful! Please sign in to continue.");
+      
+      setTimeout(() => {
+        isRegister.value = false;
+        loginForm.value.email = registerForm.value.email;
+        loginForm.value.password = "";
+      }, 1500);
 
     } catch (error) {
       console.error("Registration error:", error);
-      const message =
-        error.response?.data?.message ||
-        error.response?.data ||
-        "Registration failed. The email may already be in use.";
-      showAlert(message, "error");
+      const message = error.response?.data?.message || error.response?.data || "Registration failed. The email may already be in use.";
+      showError(message);
     }
   }
 };
-
 </script>
 
 <style scoped>
@@ -422,7 +381,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ensure full height for HTML and body */
 html, body {
   height: 100%;
 }
@@ -438,7 +396,6 @@ html, body {
   mix-blend-mode: screen;
 }
 
-/* 🔥 Light blob */
 .light {
   position: absolute;
   right: -10%;
@@ -451,7 +408,6 @@ html, body {
   mix-blend-mode: screen;
 }
 
-/* 🌊 Sweeping light beam */
 .light-sweep {
   position: absolute;
   top: 0;
@@ -463,15 +419,22 @@ html, body {
   mix-blend-mode: screen;
   animation: sweep 12s ease-in-out infinite;
 }
+
 @keyframes sweep {
   0% { transform: translateX(80%); opacity: 0.05; }
   50% { transform: translateX(0%); opacity: 0.5; }
   100% { transform: translateX(-80%); opacity: 0.05; }
 }
 
-/* Background movement */
-@keyframes fogMove { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 5%) scale(1.2); } }
-@keyframes lightShift { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-10%, 10%) scale(1.1); } }
+@keyframes fogMove { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 5%) scale(1.2); } 
+}
+
+@keyframes lightShift { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 10%) scale(1.1); } 
+}
 
 /* ✨ Auth Form Styles */
 .auth-input {
@@ -482,14 +445,14 @@ html, body {
   border-radius: 0.75rem;
   outline: none;
   transition: all 0.3s ease;
-  width: 100%; /* Ensure inputs take full width */
+  width: 100%;
 }
+
 .auth-input:focus {
   border-color: rgba(200, 0, 255, 0.6);
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* Password Toggle Button */
 .password-toggle-button {
   position: absolute;
   right: 1rem;
@@ -506,39 +469,40 @@ html, body {
 .password-toggle-button:hover {
   color: rgba(200, 0, 255, 0.8);
 }
+
 .dark .password-toggle-button {
   color: rgba(255, 255, 255, 0.6);
 }
+
 .dark .password-toggle-button:hover {
   color: rgba(255, 255, 255, 0.8);
 }
 
-
-/* Error State for Inputs */
 .input-error {
-  border-color: #ef4444 !important; /* Tailwind's red-500 */
+  border-color: #ef4444 !important;
   box-shadow: 0 0 0 1px #ef4444;
 }
+
 .error-message {
-  color: #ef4444; /* Tailwind's red-500 */
-  font-size: 0.75rem; /* text-xs */
-  margin-top: 0.25rem; /* mt-1 */
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
   position: absolute;
-  bottom: -1.25rem; /* Adjust as needed */
+  bottom: -1.25rem;
   left: 0;
 }
 
-/* Gender Selection with Icons */
 .gender-selection {
   display: flex;
   gap: 0.5rem;
   width: 100%;
   justify-content: center;
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  flex-wrap: wrap;
 }
+
 .gender-option {
-  flex: 1; /* Distribute space evenly */
-  min-width: 90px; /* Minimum width for each button */
+  flex: 1;
+  min-width: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -550,10 +514,12 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
 }
+
 .gender-option:hover {
   border-color: rgba(200, 0, 255, 0.6);
   background: rgba(255, 255, 255, 0.15);
 }
+
 .gender-option.selected-gender {
   background: linear-gradient(to right, #a855f7, #ec4899);
   border-color: #a855f7;
@@ -573,79 +539,9 @@ html, body {
   align-items: center;
   gap: 0.5rem;
 }
+
 .auth-button:hover {
   transform: scale(1.05);
   box-shadow: 0 0 25px rgba(236, 72, 153, 0.4);
-}
-
-/* Alert Container Styles */
-.alert-container {
-  position: fixed;
-  top: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease-in-out;
-  animation: fadeInDown 0.5s ease-out;
-}
-
-.alert-container.success {
-  background-color: #10b981; /* Tailwind green-500 */
-  color: white;
-}
-
-.alert-container.error {
-  background-color: #ef4444; /* Tailwind red-500 */
-  color: white;
-}
-
-.alert-container.info {
-  background-color: #3b82f6; /* Tailwind blue-500 */
-  color: white;
-}
-
-.alert-content {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.alert-icon {
-  font-size: 1.25rem;
-}
-
-.alert-message {
-  font-weight: 500;
-}
-
-.alert-close {
-  background: none;
-  border: none;
-  color: inherit;
-  font-size: 1rem;
-  cursor: pointer;
-  margin-left: 0.5rem;
-  opacity: 0.8;
-}
-
-.alert-close:hover {
-  opacity: 1;
-}
-
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -20px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
 }
 </style>

@@ -3,6 +3,14 @@
     class="relative min-h-screen w-screen transition-all duration-700"
     :class="theme === 'dark' ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-900'"
   >
+    <!-- Global Alert Component -->
+    <GlobalAlert 
+      v-model="alertState.show"
+      :message="alertState.message"
+      :type="alertState.type"
+      :duration="alertState.duration"
+    />
+
     <!-- 🌫 Background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="fog"></div>
@@ -116,6 +124,7 @@
             <CustomDatePicker 
               v-model="event.eventDate" 
               :hasError="false"
+              placeholder="Event Date"
             />
           </div>
 
@@ -157,7 +166,9 @@ import { useRouter } from 'vue-router';
 import L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from "axios";
-import CustomDatePicker from './CustomDatePicker.vue';
+import CustomDatePicker from '../components/CustomDatePicker.vue';
+import GlobalAlert from '../components/GlobalAlert.vue';
+import { useAlert } from '../composables/useAlert';
 
 // Font Awesome Setup
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -175,6 +186,8 @@ L.Icon.Default.mergeOptions({
 
 // --- COMPONENT STATE ---
 const router = useRouter();
+const { alertState, showSuccess, showError, showWarning, showInfo } = useAlert();
+
 const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
 const userDetails = ref(JSON.parse(localStorage.getItem("user") || "{}"));
@@ -198,7 +211,7 @@ const event = ref({
 // --- LIFECYCLE HOOK ---
 onMounted(() => {
   applyTheme();
-  nextTick(() => { // Wait for the DOM to be ready
+  nextTick(() => {
     initMap();
   });
 });
@@ -225,16 +238,16 @@ const initMap = () => {
 };
 
 const updateMapTiles = () => {
-    if(!map) return;
-    map.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-            map.removeLayer(layer);
-        }
-    });
-    const tileUrl = theme.value === 'dark'
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    L.tileLayer(tileUrl, { maxZoom: 19, attribution: '© OpenStreetMap & © CARTO' }).addTo(map);
+  if(!map) return;
+  map.eachLayer(layer => {
+    if (layer instanceof L.TileLayer) {
+      map.removeLayer(layer);
+    }
+  });
+  const tileUrl = theme.value === 'dark'
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  L.tileLayer(tileUrl, { maxZoom: 19, attribution: '© OpenStreetMap & © CARTO' }).addTo(map);
 }
 
 const onMapClick = (e) => updateLocation(e.latlng);
@@ -250,20 +263,39 @@ const updateLocation = (latLng) => {
     marker = L.marker(latLng).addTo(map);
   }
   map.setView(latLng, 13);
+  showInfo('Location set successfully!', 2000);
 };
 
 // --- API & FORM LOGIC ---
 const createEvent = async () => {
+  // Validation
+  if (!event.value.latitude || !event.value.longitude) {
+    showWarning('Please select a location on the map');
+    return;
+  }
+
+  if (!event.value.eventDate) {
+    showWarning('Please select an event date');
+    return;
+  }
+
+  if (!event.value.eventTime) {
+    showWarning('Please select an event time');
+    return;
+  }
+
   try {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert("You must be logged in to create an event.");
-      router.push('/auth');
+      showError("You must be logged in to create an event");
+      setTimeout(() => router.push('/auth'), 1500);
       return;
     }
+
+    showInfo('Creating event...', 1000);
+
     const eventTimestamp = `${event.value.eventDate}T${event.value.eventTime}`;
 
-    // Build the exact payload that the Spring Boot backend @RequestBody expects.
     const payload = {
       title: event.value.title,
       description: event.value.description,
@@ -276,19 +308,26 @@ const createEvent = async () => {
       eventTimestamp: eventTimestamp,
     };
 
-    // Send the request to the correct endpoint
     await axios.post("/api/events", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-    alert("🎉 Event created successfully!");
-    router.push("/myevents");
+    showSuccess("🎉 Event created successfully!");
+    
+    setTimeout(() => {
+      router.push("/myevents");
+    }, 1500);
 
   } catch (err) {
     console.error("Error creating event:", err.response?.data || err.message);
-    alert("Failed to create event. Please check the form and try again. See console for details.");
+    
+    const errorMessage = err.response?.data?.message 
+      || err.response?.data 
+      || "Failed to create event. Please try again.";
+    
+    showError(errorMessage);
   }
 };
 
@@ -310,7 +349,10 @@ const logout = () => {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
   loggedIn.value = false;
-  router.push("/auth");
+  showInfo('Logged out successfully');
+  setTimeout(() => {
+    router.push("/auth");
+  }, 1000);
 };
 </script>
 

@@ -3,6 +3,14 @@
     class="relative min-h-screen w-screen transition-all duration-700"
     :class="theme === 'dark' ? 'bg-[#0a0a0a] text-white' : 'bg-gray-100 text-gray-900'"
   >
+    <!-- Global Alert Component -->
+    <GlobalAlert 
+      v-model="alertState.show"
+      :message="alertState.message"
+      :type="alertState.type"
+      :duration="alertState.duration"
+    />
+
     <!-- 🌫 Background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="fog"></div>
@@ -82,68 +90,81 @@
     </header>
 
     <!-- 🎟️ Event List -->
-    <main class="pt-28 px-6 md:px-16 relative z-20">
+    <main class="pt-28 px-6 md:px-16 relative z-20 pb-20">
       <h1 class="text-4xl md:text-6xl font-bold mb-4">
         Explore <span class="text-purple-400">Events</span>
       </h1>
       <p class="text-gray-400 max-w-2xl mb-10">
         Discover upcoming events and register easily.
+        <span v-if="!loggedIn" class="text-purple-400 font-semibold">Sign in to register for events!</span>
       </p>
 
-      <!-- 🔒 Login check -->
-      <template v-if="!loggedIn">
-        <div class="flex flex-col items-center justify-center py-32">
-          <font-awesome-icon :icon="['fas', 'lock']" class="text-6xl text-purple-400 mb-6 animate-pulse" />
-          <h2 class="text-3xl font-bold mb-4">Login to View Events</h2>
-          <p class="text-gray-400 mb-8 max-w-md text-center">
-            You must be signed in to explore and register for upcoming events.
-          </p>
-          <router-link
-            to="/auth"
-            class="px-6 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all"
-          >
-            Go to Login
-          </router-link>
-        </div>
-      </template>
-
-      <!-- 🗓️ Event List Cards -->
-      <template v-else>
-        <div v-if="events.length > 0" class="flex flex-col gap-6">
-          <div
-            v-for="event in events"
-            :key="event.eventId"
-            class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex justify-between items-center"
-          >
-            <div class="flex flex-col gap-2">
-              <h3 class="text-xl font-semibold text-purple-300">{{ event.title }}</h3>
-              <p class="text-gray-400 text-sm max-w-md">{{ event.description }}</p>
-              <div class="flex gap-8 text-sm mt-2">
-                <p><font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> {{ formatDate(event.eventTimestamp) }}</p>
-                <p><font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" /> {{ formatTime(event.eventTimestamp) }}</p>
-                <p>
-                  <font-awesome-icon :icon="['fas', 'tag']" class="text-purple-400" />
-                  <span class="text-purple-400 font-semibold">
-                    {{ event.amount && event.amount > 0 ? '₹' + event.amount : 'Free' }}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            <button
-              @click="registerEvent(event)"
-              class="px-5 py-2 rounded-full font-semibold text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 hover:shadow-xl transition-all"
-            >
-              {{ event.amount && event.amount > 0 ? 'Register' : 'Join' }}
-            </button>
+      <!-- 🗓️ Event Groups -->
+      <div v-if="events.length > 0" class="flex flex-col gap-12">
+        
+        <!-- 🔴 Ongoing Events -->
+        <section v-if="ongoingEvents.length > 0">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+            <h2 class="text-2xl font-bold text-red-400">Ongoing Events</h2>
+            <span class="text-sm text-gray-400">({{ ongoingEvents.length }})</span>
           </div>
-        </div>
+          <div class="flex flex-col gap-6">
+            <EventCard 
+              v-for="event in ongoingEvents" 
+              :key="event.eventId"
+              :event="event"
+              :loggedIn="loggedIn"
+              status="ongoing"
+              @register="registerEvent"
+            />
+          </div>
+        </section>
 
-        <div v-else class="text-center text-gray-400 py-24">
-          <font-awesome-icon :icon="['fas', 'info-circle']" class="text-4xl mb-4 text-purple-400 animate-pulse" />
-          <p class="text-lg">No events available right now.</p>
-        </div>
-      </template>
+        <!-- 🟢 Upcoming Events -->
+        <section v-if="upcomingEvents.length > 0">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <h2 class="text-2xl font-bold text-green-400">Upcoming Events</h2>
+            <span class="text-sm text-gray-400">({{ upcomingEvents.length }})</span>
+          </div>
+          <div class="flex flex-col gap-6">
+            <EventCard 
+              v-for="event in upcomingEvents" 
+              :key="event.eventId"
+              :event="event"
+              :loggedIn="loggedIn"
+              status="upcoming"
+              @register="registerEvent"
+            />
+          </div>
+        </section>
+
+        <!-- ⚫ Past Events -->
+        <section v-if="pastEvents.length > 0">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-3 h-3 bg-gray-500 rounded-full"></div>
+            <h2 class="text-2xl font-bold text-gray-400">Past Events</h2>
+            <span class="text-sm text-gray-400">({{ pastEvents.length }})</span>
+          </div>
+          <div class="flex flex-col gap-6">
+            <EventCard 
+              v-for="event in pastEvents" 
+              :key="event.eventId"
+              :event="event"
+              :loggedIn="loggedIn"
+              status="past"
+              @register="registerEvent"
+            />
+          </div>
+        </section>
+
+      </div>
+
+      <div v-else class="text-center text-gray-400 py-24">
+        <font-awesome-icon :icon="['fas', 'info-circle']" class="text-4xl mb-4 text-purple-400 animate-pulse" />
+        <p class="text-lg">No events available right now.</p>
+      </div>
     </main>
 
     <!-- ➕ Floating Create Event Button -->
@@ -163,12 +184,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
 import axios from "axios";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import GlobalAlert from '../components/GlobalAlert.vue';
+import { useAlert } from '../composables/useAlert';
+import EventCard from '../components/EventCard.vue';
+
 library.add(fas);
+
+const router = useRouter();
+const { alertState, showSuccess, showError, showWarning, showInfo } = useAlert();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
@@ -181,6 +210,33 @@ const userDetails = ref({
   phone_no: "",
   gender: "",
   dob: "",
+});
+
+// Group events by status
+const ongoingEvents = computed(() => {
+  const now = new Date();
+  return events.value.filter(event => {
+    const eventDate = new Date(event.eventTimestamp);
+    const eventEndDate = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000); // Assume 4 hour duration
+    return eventDate <= now && now <= eventEndDate;
+  });
+});
+
+const upcomingEvents = computed(() => {
+  const now = new Date();
+  return events.value.filter(event => {
+    const eventDate = new Date(event.eventTimestamp);
+    return eventDate > now;
+  }).sort((a, b) => new Date(a.eventTimestamp) - new Date(b.eventTimestamp));
+});
+
+const pastEvents = computed(() => {
+  const now = new Date();
+  return events.value.filter(event => {
+    const eventDate = new Date(event.eventTimestamp);
+    const eventEndDate = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000);
+    return eventEndDate < now;
+  }).sort((a, b) => new Date(b.eventTimestamp) - new Date(a.eventTimestamp));
 });
 
 const applyTheme = () => {
@@ -196,7 +252,7 @@ const toggleTheme = () => {
 onMounted(async () => {
   applyTheme();
 
-  // ✅ Get user details from localStorage
+  // Get user details from localStorage
   const userData = localStorage.getItem("user");
   if (userData) {
     try {
@@ -207,32 +263,27 @@ onMounted(async () => {
     }
   }
 
-  if (loggedIn.value) {
-    try {
-      const response = await axios.get("/api/events");
-      events.value = response.data || [];
-    } catch (err) {
-      console.error("Error fetching events:", err);
+  // Fetch events regardless of login status
+  try {
+    const response = await axios.get("/api/events");
+    events.value = response.data || [];
+    
+    if (events.value.length > 0) {
+      showInfo(`Found ${events.value.length} events`, 2000);
     }
+  } catch (err) {
+    console.error("Error fetching events:", err);
+    showError("Failed to load events. Please try again.");
   }
 });
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return "TBA";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
-};
-
-const formatTime = (dateStr) => {
-  if (!dateStr) return "TBA";
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-};
-
 const registerEvent = async (event) => {
+  // Check if user is logged in
   if (!loggedIn.value) {
-    alert("Please log in to register for this event.");
-    window.location.href = "/auth";
+    showWarning("Please sign in to register for events");
+    setTimeout(() => {
+      router.push("/auth");
+    }, 1500);
     return;
   }
 
@@ -242,12 +293,12 @@ const registerEvent = async (event) => {
   try {
     const isRegisteredResponse = await axios.get(`/api/event-participants/is-registered/${event.eventId}/${user.user_id}`);
     if (isRegisteredResponse.data) {
-      alert("You are already registered for this event!");
+      showInfo("You are already registered for this event!");
       return;
     }
   } catch (err) {
     console.error("Error checking registration status:", err);
-    alert("Failed to check registration status. Please try again.");
+    showError("Failed to check registration status. Please try again.");
     return;
   }
 
@@ -257,16 +308,22 @@ const registerEvent = async (event) => {
       await axios.post(`/api/events/${event.eventId}/register-free`, {
         userId: user.user_id,
       });
-      alert("Successfully registered for free event!");
+      showSuccess("Successfully registered for the event!");
+      
+      setTimeout(() => {
+        router.push("/myevents");
+      }, 1500);
     } catch (err) {
       console.error("Error registering free event:", err);
-      alert("Failed to register for free event.");
+      showError("Failed to register for the event. Please try again.");
     }
     return;
   }
 
   // Paid event - Razorpay
   try {
+    showInfo("Preparing payment...", 1000);
+    
     const token = localStorage.getItem("token");
     const response = await axios.post(`/api/events/${event.eventId}/create-order`, {
       userId: user.user_id,
@@ -279,7 +336,7 @@ const registerEvent = async (event) => {
     console.log("Order data:", orderData);
 
     const options = {
-      key: orderData.key, // use the key from the backend
+      key: orderData.key,
       amount: orderData.amount,
       currency: "INR",
       name: "Eventra",
@@ -287,22 +344,38 @@ const registerEvent = async (event) => {
       order_id: orderData.order_id,
       handler: async function (paymentResponse) {
         const token = localStorage.getItem("token");
-        await axios.post("/api/events/verify-payment", {
-          userId: user.user_id,
-          eventId: event.eventId,
-          razorpay_order_id: paymentResponse.razorpay_order_id,
-          razorpay_payment_id: paymentResponse.razorpay_payment_id,
-          razorpay_signature: paymentResponse.razorpay_signature,
-        }, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        alert("Payment successful! You are registered.");
-        window.location.href = "/myevents";
+        try {
+          await axios.post("/api/events/verify-payment", {
+            userId: user.user_id,
+            eventId: event.eventId,
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_signature: paymentResponse.razorpay_signature,
+          }, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          showSuccess("Payment successful! You are registered.");
+          setTimeout(() => {
+            router.push("/myevents");
+          }, 1500);
+        } catch (err) {
+          console.error("Payment verification failed:", err);
+          showError("Payment verification failed. Please contact support.");
+        }
       },
-      prefill: { name: user.name, email: user.email, contact: user.phone_no },
+      prefill: { 
+        name: user.name, 
+        email: user.email, 
+        contact: user.phone_no 
+      },
       theme: { color: "#9b5de5" },
+      modal: {
+        ondismiss: function() {
+          showWarning("Payment cancelled");
+        }
+      }
     };
 
     console.log("Razorpay options:", options);
@@ -311,19 +384,77 @@ const registerEvent = async (event) => {
     razor.open();
   } catch (err) {
     console.error("Error creating order:", err);
-    alert("Failed to initiate payment.");
+    showError("Failed to initiate payment. Please try again.");
   }
 };
 
 const toggleDropdown = () => (dropdownOpen.value = !dropdownOpen.value);
+
 const logout = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("user");
   loggedIn.value = false;
   dropdownOpen.value = false;
   userDetails.value = {};
-  window.location.href = "/auth";
+  showInfo("Logged out successfully");
+  setTimeout(() => {
+    router.push("/auth");
+  }, 1000);
 };
 </script>
+
+<style>
+/* Background animations */
+.fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
+              radial-gradient(circle at 40% 50%, rgba(255, 255, 255, 0.05), transparent 50%);
+  filter: blur(80px);
+  animation: fogMove 20s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+.light {
+  position: absolute;
+  right: -10%;
+  top: -10%;
+  width: 80%;
+  height: 120%;
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%);
+  filter: blur(160px);
+  animation: lightShift 18s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+.light-sweep {
+  position: absolute;
+  top: 0;
+  right: -60%;
+  width: 160%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 45%, rgba(255, 255, 255, 0.3) 50%, transparent 55%);
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  animation: sweep 12s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { transform: translateX(80%); opacity: 0.05; }
+  50% { transform: translateX(0%); opacity: 0.5; }
+  100% { transform: translateX(-80%); opacity: 0.05; }
+}
+
+@keyframes fogMove { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 5%) scale(1.2); } 
+}
+
+@keyframes lightShift { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 10%) scale(1.1); } 
+}
+</style>
 
 <style scoped>
 .nav-link {
