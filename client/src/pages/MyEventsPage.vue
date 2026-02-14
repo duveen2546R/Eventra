@@ -18,7 +18,7 @@
           <div class="modal-content" @click.stop>
             <div class="modal-header">
               <font-awesome-icon :icon="['fas', 'exclamation-triangle']" class="text-red-400 text-3xl mb-2" />
-              <h3 class="text-xl font-bold">Confirm Delete</h3>
+              <h3 class="text-red-600 text-xl font-bold">Confirm Delete</h3>
             </div>
             <div class="modal-body">
               <p class="text-gray-300">Are you sure you want to delete</p>
@@ -70,7 +70,10 @@
         <router-link to="/payments" class="nav-link" :class="{ active: $route.path === '/payments' }">
           <font-awesome-icon :icon="['fas', 'credit-card']" /> Payments
         </router-link>
-
+        <router-link to="/insights" class="nav-link" :class="{ active: $route.path === '/insights' }">
+          <font-awesome-icon :icon="['fas', 'chart-line']" /> Insights
+        </router-link>
+        
         <div class="relative">
           <template v-if="loggedIn">
             <button
@@ -174,13 +177,18 @@
             </button>
           </div>
         </div>
-
+        
+        
         <!-- Search Box -->
         <div class="relative w-full md:w-72">
           <font-awesome-icon
             :icon="['fas', 'search']"
-            class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base pointer-events-none"
+            :class="[
+              'absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base pointer-events-none transition-opacity duration-200',
+              searchQuery ? 'opacity-0' : 'opacity-100'
+            ]"
           />
+
           <input
             v-model="searchQuery"
             @input="applyFilters"
@@ -188,17 +196,19 @@
             placeholder="Search events..."
             class="input-box pl-11 pr-10 w-full text-sm placeholder-gray-400"
           />
+
           <button
             v-if="searchQuery"
             @click="searchQuery = ''; applyFilters();"
             type="button"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 text-sm"
+            class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 text-sm"
           >
             <font-awesome-icon :icon="['fas', 'times']" />
           </button>
         </div>
+        
       </div>
-
+      
       <!-- 🗓️ Event Type Tabs -->
       <div class="flex overflow-x-auto gap-4 mb-10 pb-2 hide-scrollbar">
         <button
@@ -680,6 +690,7 @@ const logout = () => {
   padding: 0.5rem 1.2rem;
   border-radius: 9999px;
   font-weight: 600;
+  color:aliceblue;
   transition: all 0.2s;
   display: inline-flex;
   align-items: center;

@@ -128,13 +128,6 @@
               Visualize your payment activities and event performance with interactive charts.
             </p>
           </div>
-          <router-link
-            to="/payments"
-            class="flex items-center gap-2 px-6 py-3 rounded-full border border-purple-400/30 hover:bg-purple-500/20 transition-all"
-          >
-            <font-awesome-icon :icon="['fas', 'arrow-left']" />
-            <span class="hidden md:inline">Back to Payments</span>
-          </router-link>
         </div>
 
         <!-- Summary Cards -->

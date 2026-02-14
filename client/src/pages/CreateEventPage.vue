@@ -38,6 +38,12 @@
         <router-link to="/myevents" class="nav-link" :class="{ active: $route.path === '/myevents' }">
           <font-awesome-icon :icon="['fas', 'star']" /> My Events
         </router-link>
+        <router-link to="/payments" class="nav-link" :class="{ active: $route.path === '/payments' }">
+          <font-awesome-icon :icon="['fas', 'credit-card']" /> Payments
+        </router-link>
+        <router-link to="/insights" class="nav-link" :class="{ active: $route.path === '/insights' }">
+          <font-awesome-icon :icon="['fas', 'chart-line']" /> Insights
+        </router-link>
         <!-- Auth Controls -->
         <div class="relative">
           <template v-if="loggedIn">
@@ -72,16 +78,16 @@
       </nav>
     </header>
 
-    <!-- ✏️ Create Event Form -->
+    <!-- ✏️ Create/Edit Event Form -->
     <main class="pt-28 px-6 md:px-16 relative z-20">
       <h1 class="text-4xl md:text-6xl font-bold mb-4">
-        Create <span class="text-purple-400">Event</span>
+        {{ isEditMode ? 'Edit' : 'Create' }} <span class="text-purple-400">Event</span>
       </h1>
       <p class="text-gray-400 max-w-2xl mb-10">
-        Fill in the event details below to add a new event to Eventra.
+        {{ isEditMode ? 'Update the event details below.' : 'Fill in the event details below to add a new event to Eventra.' }}
       </p>
 
-      <form @submit.prevent="createEvent" class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl shadow-lg p-8 md:p-10 max-w-3xl mx-auto flex flex-col gap-6">
+      <form @submit.prevent="submitEvent" class="mb-10 backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl shadow-lg p-8 md:p-10 max-w-3xl mx-auto flex flex-col gap-6">
         
         <!-- Title & Description -->
         <div>
@@ -156,13 +162,14 @@
           </div>
         </div>
         <button type="submit" class="mt-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all">
-          <font-awesome-icon :icon="['fas', 'plus']" class="mr-2" /> Create Event
+          <font-awesome-icon :icon="['fas', isEditMode ? 'save' : 'plus']" class="mr-2" /> 
+          {{ isEditMode ? 'Update Event' : 'Create Event' }}
         </button>
       </form>
     </main>
 
     <!-- 🦶 Footer -->
-    <footer class="py-6 text-center text-gray-400 border-t border-purple-400/20 bg-transparent">
+    <footer class="py-6 mt-10 text-center text-gray-400 border-t border-purple-400/20 bg-transparent">
       © {{ new Date().getFullYear() }} Eventra — Empower Your Events
     </footer>
   </div>
@@ -170,7 +177,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from "vue";
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from "axios";
@@ -195,6 +202,7 @@ L.Icon.Default.mergeOptions({
 
 // --- COMPONENT STATE ---
 const router = useRouter();
+const route = useRoute();
 const { alertState, showSuccess, showError, showWarning, showInfo } = useAlert();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
@@ -204,6 +212,8 @@ const userProfilePic = ref(null);
 const dropdownOpen = ref(false);
 let map = null;
 let marker = null;
+const isEditMode = ref(false);
+const editEventId = ref(null);
 const event = ref({
   title: "",
   description: "",
@@ -218,12 +228,71 @@ const event = ref({
   remainingCapacity: 100,
 });
 
+// --- LOAD EDIT DATA ---
+const loadEditData = () => {
+  // Check URL parameters
+  const urlEdit = route.query.edit === 'true';
+  const urlEventId = route.query.eventId;
+  
+  if (urlEdit && urlEventId) {
+    isEditMode.value = true;
+    editEventId.value = urlEventId;
+    
+    // Try to load from sessionStorage
+    const storedEvent = sessionStorage.getItem('editEvent');
+    if (storedEvent) {
+      try {
+        const editData = JSON.parse(storedEvent);
+        
+        // Parse the eventTimestamp to get date and time
+        const eventDateTime = new Date(editData.eventTimestamp);
+        const dateStr = eventDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
+        const timeStr = eventDateTime.toTimeString().slice(0, 5); // HH:MM
+        
+        // Populate form fields
+        event.value = {
+          title: editData.title || "",
+          description: editData.description || "",
+          location: editData.location || "",
+          latitude: editData.latitude || "",
+          longitude: editData.longitude || "",
+          amount: editData.amount || 0,
+          capacity: editData.capacity || 100,
+          status: editData.status || "ACTIVE",
+          eventDate: dateStr,
+          eventTime: timeStr,
+          remainingCapacity: editData.remainingCapacity || editData.capacity || 100,
+        };
+        
+        showInfo('Editing event: ' + editData.title, 2000);
+        
+        // Clear sessionStorage after loading
+        sessionStorage.removeItem('editEvent');
+      } catch (err) {
+        console.error('Error loading edit data:', err);
+        showError('Failed to load event data');
+      }
+    }
+  }
+};
+
 // --- LIFECYCLE HOOK ---
 onMounted(() => {
   applyTheme();
   checkUserProfile();
+  loadEditData();
   nextTick(() => {
     initMap();
+    // If editing and we have coordinates, set marker on map
+    if (isEditMode.value && event.value.latitude && event.value.longitude) {
+      const lat = parseFloat(event.value.latitude);
+      const lng = parseFloat(event.value.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        setTimeout(() => {
+          updateLocation({ lat, lng });
+        }, 500);
+      }
+    }
   });
 });
 
@@ -305,10 +374,20 @@ const updateLocation = (latLng) => {
     marker = L.marker(latLng).addTo(map);
   }
   map.setView(latLng, 13);
-  showInfo('Location set successfully!', 2000);
+  if (!isEditMode.value) {
+    showInfo('Location set successfully!', 2000);
+  }
 };
 
 // --- API & FORM LOGIC ---
+const submitEvent = async () => {
+  if (isEditMode.value) {
+    await updateEvent();
+  } else {
+    await createEvent();
+  }
+};
+
 const createEvent = async () => {
   // Validation
   if (!event.value.latitude || !event.value.longitude) {
@@ -368,6 +447,71 @@ const createEvent = async () => {
     const errorMessage = err.response?.data?.message 
       || err.response?.data 
       || "Failed to create event. Please try again.";
+    
+    showError(errorMessage);
+  }
+};
+
+const updateEvent = async () => {
+  // Validation
+  if (!event.value.latitude || !event.value.longitude) {
+    showWarning('Please select a location on the map');
+    return;
+  }
+
+  if (!event.value.eventDate) {
+    showWarning('Please select an event date');
+    return;
+  }
+
+  if (!event.value.eventTime) {
+    showWarning('Please select an event time');
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showError("You must be logged in to update an event");
+      setTimeout(() => router.push('/auth'), 1500);
+      return;
+    }
+
+    showInfo('Updating event...', 1000);
+
+    const eventTimestamp = `${event.value.eventDate}T${event.value.eventTime}`;
+
+    const payload = {
+      title: event.value.title,
+      description: event.value.description,
+      location: event.value.location,
+      latitude: event.value.latitude,
+      longitude: event.value.longitude,
+      amount: event.value.amount,
+      capacity: event.value.capacity,
+      remainingCapacity: event.value.remainingCapacity,
+      status: event.value.status,
+      eventTimestamp: eventTimestamp,
+    };
+
+    await axios.put(`/api/events/${editEventId.value}`, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    showSuccess("✅ Event updated successfully!");
+    
+    setTimeout(() => {
+      router.push("/myevents");
+    }, 1500);
+
+  } catch (err) {
+    console.error("Error updating event:", err.response?.data || err.message);
+    
+    const errorMessage = err.response?.data?.message 
+      || err.response?.data 
+      || "Failed to update event. Please try again.";
     
     showError(errorMessage);
   }

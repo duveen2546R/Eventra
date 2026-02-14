@@ -46,6 +46,10 @@
           <font-awesome-icon :icon="['fas', 'credit-card']" /> Payments
         </router-link>
 
+        <router-link to="/insights" class="nav-link" :class="{ active: $route.path === '/insights' }">
+          <font-awesome-icon :icon="['fas', 'chart-line']" /> Insights
+        </router-link>
+
         <!-- 👤 Auth Controls -->
         <div class="relative">
           <template v-if="loggedIn">
