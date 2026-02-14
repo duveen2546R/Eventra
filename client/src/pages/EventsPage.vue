@@ -317,6 +317,7 @@ onMounted(async () => {
   try {
     const response = await axios.get("/api/events");
     events.value = response.data || [];
+    console.log("Fetched events:", events.value);
     
     if (events.value.length > 0) {
       showInfo(`Found ${events.value.length} events`, 2000);
