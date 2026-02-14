@@ -128,10 +128,16 @@
                 <input type="email" v-model="registerForm.email" placeholder="Email Address" class="auth-input" :class="{ 'input-error': registerErrors.email }" required />
                 <p v-if="registerErrors.email" class="error-message">{{ registerErrors.email }}</p>
               </div>
+              
+              <!-- Custom Date Picker -->
               <div class="relative">
-                <input type="date" v-model="registerForm.dob" class="auth-input date-input" :class="{ 'input-error': registerErrors.dob }" required />
+                <CustomDatePicker 
+                  v-model="registerForm.dob" 
+                  :hasError="!!registerErrors.dob"
+                />
                 <p v-if="registerErrors.dob" class="error-message">{{ registerErrors.dob }}</p>
               </div>
+
               <div class="relative">
                 <div class="gender-selection">
                   <label class="gender-option" :class="{ 'selected-gender': registerForm.gender === 'Male' }">
@@ -218,7 +224,10 @@ import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { useRouter } from 'vue-router';
 import axios from "axios";
+import CustomDatePicker from './CustomDatePicker.vue';
 
+// Note: CustomDatePicker uses .auth-input class from parent component
+// Make sure the parent has these styles defined
 
 library.add(fas);
 
@@ -436,7 +445,7 @@ html, body {
   top: -10%;
   width: 80%;
   height: 120%;
-  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%); /* Adjusted color for purple theme */
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%);
   filter: blur(160px);
   animation: lightShift 18s ease-in-out infinite alternate;
   mix-blend-mode: screen;
@@ -517,41 +526,6 @@ html, body {
   position: absolute;
   bottom: -1.25rem; /* Adjust as needed */
   left: 0;
-}
-
-
-/* Calendar input styling */
-.date-input {
-  appearance: none; /* Remove default browser styling */
-  position: relative;
-  padding-right: 2.5rem; /* Space for the calendar icon */
-}
-.date-input::-webkit-calendar-picker-indicator {
-  background: transparent;
-  bottom: 0;
-  color: transparent;
-  cursor: pointer;
-  height: auto;
-  left: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: auto;
-}
-/* Custom icon for date input if desired, though native picker is often best */
-.date-input::after {
-  content: "\f073"; /* Unicode for calendar-alt icon (Font Awesome solid) */
-  font-family: "Font Awesome 5 Free";
-  font-weight: 900;
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(150, 0, 255, 0.6);
-  pointer-events: none; /* Make sure it doesn't interfere with click */
-}
-.dark .date-input::after {
-  color: rgba(255, 255, 255, 0.6);
 }
 
 /* Gender Selection with Icons */

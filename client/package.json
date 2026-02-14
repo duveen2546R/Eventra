@@ -19,7 +19,10 @@
     "@fortawesome/vue-fontawesome": "^3.1.2",
     "@motionone/vue": "^10.16.4",
     "axios": "^1.12.2",
+    "chart.js": "^4.5.1",
     "jwt-decode": "^4.0.0",
+    "leaflet": "^1.9.4",
+    "leaflet-geosearch": "^4.2.2",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"

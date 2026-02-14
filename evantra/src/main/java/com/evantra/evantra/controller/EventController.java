@@ -55,18 +55,26 @@ public class EventController {
     // ===================================================================
     // = AUTHENTICATED EVENT MANAGEMENT (CRUD)
     // ===================================================================
-    
     @PostMapping
     public Event createEvent(@RequestBody Event event, Principal principal) {
-        User user = userRepository.findByUsername(principal.getName()).orElseThrow(
-                () -> new RuntimeException("User not found. Please ensure you are logged in."));
+
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found. Please ensure you are logged in."));
 
         Event savedEvent = eventRepository.save(event);
 
         EventOrganizer eventOrganizer = new EventOrganizer();
+
+        // SET COMPOSITE KEY MANUALLY
+        EventOrganizerId id = new EventOrganizerId();
+        id.setEventId(savedEvent.getEventId());
+        id.setUserId(user.getUserId());
+
+        eventOrganizer.setId(id);
         eventOrganizer.setEvent(savedEvent);
         eventOrganizer.setUser(user);
         eventOrganizer.setRole("organizer");
+
         eventOrganizerRepository.save(eventOrganizer);
 
         return savedEvent;

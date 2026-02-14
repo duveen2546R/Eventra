@@ -110,10 +110,15 @@
           </div>
         </div>
         <div class="grid md:grid-cols-3 gap-6">
+          <!-- Custom Date Picker -->
           <div>
             <label class="text-sm text-gray-400">Date</label>
-            <input v-model="event.eventDate" type="date" class="input-box" required />
+            <CustomDatePicker 
+              v-model="event.eventDate" 
+              :hasError="false"
+            />
           </div>
+
           <div>
             <label class="text-sm text-gray-400">Time</label>
             <input v-model="event.eventTime" type="time" class="input-box" required />
@@ -152,6 +157,7 @@ import { useRouter } from 'vue-router';
 import L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import axios from "axios";
+import CustomDatePicker from './CustomDatePicker.vue';
 
 // Font Awesome Setup
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -257,8 +263,7 @@ const createEvent = async () => {
     }
     const eventTimestamp = `${event.value.eventDate}T${event.value.eventTime}`;
 
-    // 2. Build the exact payload that the Spring Boot backend @RequestBody expects.
-    // This payload matches the fields in your Event.java entity.
+    // Build the exact payload that the Spring Boot backend @RequestBody expects.
     const payload = {
       title: event.value.title,
       description: event.value.description,
@@ -268,11 +273,10 @@ const createEvent = async () => {
       amount: event.value.amount,
       capacity: event.value.capacity, 
       status: event.value.status,
-      eventTimestamp: eventTimestamp, // The new combined timestamp field
+      eventTimestamp: eventTimestamp,
     };
-    // ------------------------------------
 
-    // 3. Send the request to the correct endpoint
+    // Send the request to the correct endpoint
     await axios.post("/api/events", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -280,7 +284,7 @@ const createEvent = async () => {
     });
 
     alert("🎉 Event created successfully!");
-    router.push("/myevents"); // Redirect to a relevant page after creation
+    router.push("/myevents");
 
   } catch (err) {
     console.error("Error creating event:", err.response?.data || err.message);
@@ -297,7 +301,7 @@ const applyTheme = () => {
 const toggleTheme = () => {
   theme.value = theme.value === "dark" ? "light" : "dark";
   applyTheme();
-  updateMapTiles(); // Update map tiles when theme changes
+  updateMapTiles();
 };
 
 const toggleDropdown = () => dropdownOpen.value = !dropdownOpen.value;
@@ -353,26 +357,79 @@ const logout = () => {
   background: #fff !important;
   color: #111 !important;
 }
+
+/* Background animations */
+.fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.1), transparent 60%),
+              radial-gradient(circle at 40% 50%, rgba(255, 255, 255, 0.05), transparent 50%);
+  filter: blur(80px);
+  animation: fogMove 20s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+.light {
+  position: absolute;
+  right: -10%;
+  top: -10%;
+  width: 80%;
+  height: 120%;
+  background: radial-gradient(circle at 60% 50%, rgba(255, 255, 255, 0.35), rgba(150, 0, 255, 0.15), transparent 80%);
+  filter: blur(160px);
+  animation: lightShift 18s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+
+.light-sweep {
+  position: absolute;
+  top: 0;
+  right: -60%;
+  width: 160%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent 45%, rgba(255, 255, 255, 0.3) 50%, transparent 55%);
+  filter: blur(60px);
+  mix-blend-mode: screen;
+  animation: sweep 12s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% { transform: translateX(80%); opacity: 0.05; }
+  50% { transform: translateX(0%); opacity: 0.5; }
+  100% { transform: translateX(-80%); opacity: 0.05; }
+}
+
+@keyframes fogMove { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 5%) scale(1.2); } 
+}
+
+@keyframes lightShift { 
+  0% { transform: translate(0, 0) scale(1); } 
+  100% { transform: translate(-10%, 10%) scale(1.1); } 
+}
 </style>
 
 <style scoped>
-/* All your beautiful, existing component-specific styles go here */
+/* Input styles matching auth form */
 .input-box {
   width: 100%;
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-  margin-top: 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(150, 0, 255, 0.2);
   color: inherit;
-  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
   outline: none;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  margin-top: 0.4rem;
 }
+
 .input-box:focus {
-  border-color: rgba(168, 85, 247, 0.6);
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+  border-color: rgba(200, 0, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
 }
+
+/* Navigation links */
 .nav-link {
   display: flex;
   align-items: center;
@@ -383,12 +440,37 @@ const logout = () => {
   transition: all 0.3s;
   font-weight: 600;
 }
+
 .nav-link:hover {
   background-color: rgba(168, 85, 247, 0.2);
   border-color: rgba(168, 85, 247, 0.3);
 }
+
 .nav-link.active {
   background-color: rgba(168, 85, 247, 0.3);
   border-color: rgba(168, 85, 247, 0.5);
+}
+
+/* Auth input class for CustomDatePicker compatibility */
+.auth-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(150, 0, 255, 0.2);
+  color: inherit;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  outline: none;
+  transition: all 0.3s ease;
+  width: 100%;
+  cursor: pointer;
+}
+
+.auth-input:focus {
+  border-color: rgba(200, 0, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.input-error {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 1px #ef4444;
 }
 </style>
