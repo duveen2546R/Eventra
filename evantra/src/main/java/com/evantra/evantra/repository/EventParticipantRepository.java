@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface EventParticipantRepository extends JpaRepository<EventParticipant, Long> {
+public interface EventParticipantRepository extends JpaRepository<EventParticipant, UUID> {
     EventParticipant findByEvent_EventIdAndUser_UserId(UUID eventId, UUID userId);
     long countByEvent_EventId(UUID eventId);
     @Query("SELECT count(ep) FROM EventParticipant ep WHERE ep.event.eventId = :eventId AND ep.checkedIn = :checkedIn")

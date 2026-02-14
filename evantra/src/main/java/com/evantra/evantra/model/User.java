@@ -30,7 +30,7 @@ public class User implements UserDetails {
     @Column(name = "email", unique = true, nullable = false)
     private String email;
     
-    @Column(name = "password", nullable = false)
+    @Column(name = "password")
     private String password;
 
     @Column(name = "phone_no")
@@ -47,7 +47,10 @@ public class User implements UserDetails {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
-
+    
+    @Column(name = "firebase_uid", unique = true)
+    private String firebaseUid;
+    
     @PrePersist
     protected void onCreate() {
         createdAt = OffsetDateTime.now();
