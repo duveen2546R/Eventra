@@ -46,6 +46,16 @@
           <font-awesome-icon :icon="['fas', theme === 'dark' ? 'sun' : 'moon']" />
           <span class="hidden md:inline">{{ theme === 'dark' ? 'Light' : 'Dark' }}</span>
         </button>
+
+        <!-- Profile Picture -->
+        <div v-if="userProfilePic" class="profile-pic-container">
+          <img 
+            :src="userProfilePic" 
+            alt="Profile" 
+            class="profile-pic"
+            @error="handleImageError"
+          />
+        </div>
       </div>
     </header>
 
@@ -255,6 +265,7 @@ import CustomDatePicker from '../components/CustomDatePicker.vue';
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert.js';
 import { useFirebaseAuth } from '../composables/useFirebaseAuth.js';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 library.add(fas);
 
@@ -273,6 +284,9 @@ const isRegister = ref(false);
 // Password visibility states
 const showLoginPassword = ref(false);
 const showRegisterPassword = ref(false);
+
+// Profile picture state
+const userProfilePic = ref(null);
 
 const toggleLoginPasswordVisibility = () => {
   showLoginPassword.value = !showLoginPassword.value;
@@ -310,7 +324,41 @@ const toggleTheme = () => {
   applyTheme();
 };
 
-onMounted(applyTheme);
+// Check for user profile picture
+const checkUserProfile = () => {
+  const auth = getAuth();
+  
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.photoURL) {
+      userProfilePic.value = user.photoURL;
+    } else {
+      // Check localStorage for saved user data
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          if (userData.profile_pic) {
+            userProfilePic.value = userData.profile_pic;
+          }
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      } else {
+        userProfilePic.value = null;
+      }
+    }
+  });
+};
+
+// Handle image load errors
+const handleImageError = () => {
+  userProfilePic.value = null;
+};
+
+onMounted(() => {
+  applyTheme();
+  checkUserProfile();
+});
 
 // 🧠 Logic
 const toggleAuthMode = () => {
@@ -339,8 +387,6 @@ const validateRegisterForm = () => {
   else if (registerForm.value.password.length < 6) registerErrors.value.password = "Password must be at least 6 characters.";
   return Object.keys(registerErrors.value).length === 0;
 };
-
-import { getAuth } from "firebase/auth";
 
 const handleGoogleSignIn = async () => {
     const result = await signInWithGoogle();
@@ -371,7 +417,7 @@ const handleGoogleSignIn = async () => {
             idToken: idToken
         });
 
-        // Backend may return jwt or token
+        // Backend returns jwt or token
         const token = response.data.jwt || response.data.token;
 
         if (!token) {
@@ -383,11 +429,12 @@ const handleGoogleSignIn = async () => {
 
         if (response.data.userData) {
             localStorage.setItem("user", JSON.stringify(response.data.userData));
+            userProfilePic.value = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).profile_pic : response.data.userData.profile_pic || null;
         } else {
             showError("Backend did not return user data.");
             return;
         }
-
+        console.log('userProfilePic after Google Sign-In:', userProfilePic.value);
         setTimeout(() => router.push("/home"), 1000);
 
     } catch (error) {
@@ -424,6 +471,11 @@ const handleLogin = async () => {
 
         if (data.userData) {
           localStorage.setItem("user", JSON.stringify(data.userData));
+          
+          // Set profile picture from backend response
+          if (data.userData.profile_pic) {
+            userProfilePic.value = data.userData.profile_pic;
+          }
         }
 
         showSuccess(message);
@@ -482,7 +534,12 @@ const handleRegister = async () => {
         password: registerForm.value.password,
       };
 
-      await axios.post("/api/auth/register", payload);
+      const response = await axios.post("/api/auth/register", payload);
+
+      // Set profile picture from backend response if available
+      if (response.data.userData && response.data.userData.profile_pic) {
+        userProfilePic.value = response.data.userData.profile_pic;
+      }
 
       showSuccess("Registration successful! Please sign in to continue.");
       
@@ -568,6 +625,37 @@ html, body {
 @keyframes lightShift { 
   0% { transform: translate(0, 0) scale(1); } 
   100% { transform: translate(-10%, 10%) scale(1.1); } 
+}
+
+/* Profile Picture Styles */
+.profile-pic-container {
+  position: relative;
+}
+
+.profile-pic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
+}
+
+.profile-pic:hover {
+  border-color: rgba(168, 85, 247, 0.8);
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+  transform: scale(1.05);
+}
+
+.dark .profile-pic {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .profile-pic:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
 /* 🔥 Google Sign-In Button */

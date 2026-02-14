@@ -47,6 +47,7 @@
         </router-link>
 
         <router-link
+          v-if="loggedIn"
           to="/myevents"
           class="nav-link"
           :class="{ active: $route.path === '/myevents' }"
@@ -55,6 +56,7 @@
         </router-link>
 
         <router-link
+          v-if="loggedIn"
           to="/payments"
           class="nav-link"
           :class="{ active: $route.path === '/payments' }"
@@ -69,7 +71,15 @@
               @click="toggleDropdown"
               class="flex items-center gap-2 border border-purple-400/30 px-3 py-2 rounded-full transition-all duration-300 text-sm hover:bg-purple-600/20"
             >
-              <font-awesome-icon :icon="['fas', 'user-circle']" class="text-lg" />
+              <!-- Profile Picture or Icon -->
+              <img 
+                v-if="userProfilePic" 
+                :src="userProfilePic" 
+                alt="Profile" 
+                class="profile-pic-small"
+                @error="handleImageError"
+              />
+              <font-awesome-icon v-else :icon="['fas', 'user-circle']" class="text-lg" />
               <span v-if="userName">{{ userName }}</span> 
             </button>
 
@@ -248,16 +258,18 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 library.add(fas);
 
 const router = useRouter();
-const { alertState, showSuccess, showError, showInfo ,showWarning } = useAlert();
+const { alertState, showSuccess, showError, showInfo, showWarning } = useAlert();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
 const dropdownOpen = ref(false);
 const userName = ref("");
+const userProfilePic = ref(null);
 
 const stats = ref({
   upcomingEvents: 0,
@@ -315,6 +327,37 @@ const toggleTheme = () => {
   applyTheme();
 };
 
+// Check for user profile picture
+const checkUserProfile = () => {
+  const auth = getAuth();
+  
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.photoURL) {
+      userProfilePic.value = user.photoURL;
+    } else {
+      // Check localStorage for saved user data
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          if (userData.profile_pic) {
+            userProfilePic.value = userData.profile_pic;
+          }
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      } else {
+        userProfilePic.value = null;
+      }
+    }
+  });
+};
+
+// Handle image load errors
+const handleImageError = () => {
+  userProfilePic.value = null;
+};
+
 const fetchStats = async () => {
   if (!loggedIn.value) return;
   
@@ -368,12 +411,19 @@ const handleCardClick = (title) => {
 
 onMounted(async () => {
   applyTheme();
+  checkUserProfile();
 
   const userData = localStorage.getItem("user");
   if (userData) {
     try {
       const parsed = JSON.parse(userData);
       userName.value = parsed.name || "";
+      
+      // Set profile picture from user data if available
+      if (parsed.profile_pic) {
+        userProfilePic.value = parsed.profile_pic;
+      }
+      
       showSuccess(`Welcome back, ${userName.value}!`, 2000);
     } catch (err) {
       console.error("Failed to parse user data:", err);
@@ -393,6 +443,7 @@ const logout = () => {
   loggedIn.value = false;
   dropdownOpen.value = false;
   userName.value = "";
+  userProfilePic.value = null;
   stats.value = { upcomingEvents: 0, organizing: 0, registered: 0, completed: 0 };
   showInfo("Logged out successfully");
   setTimeout(() => {
@@ -455,6 +506,29 @@ const logout = () => {
 </style>
 
 <style scoped>
+/* Profile Picture Styles */
+.profile-pic-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  transition: all 0.3s ease;
+}
+
+.profile-pic-small:hover {
+  border-color: rgba(168, 85, 247, 0.8);
+  transform: scale(1.1);
+}
+
+.dark .profile-pic-small {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .profile-pic-small:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
 .nav-link {
   display: flex;
   align-items: center;

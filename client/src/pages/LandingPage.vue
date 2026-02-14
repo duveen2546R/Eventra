@@ -47,10 +47,22 @@
         </router-link>
 
         <!-- Show user menu when signed in -->
-        <div v-else class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold border border-purple-400/40">
-          <font-awesome-icon :icon="['fas', 'user-circle']" />
-          <span class="hidden md:inline">Profile</span>
-        </div>
+        <router-link
+          v-else
+          to="/home"
+          class="flex items-center gap-2 px-4 md:px-6 py-2 rounded-full text-sm font-semibold border border-purple-400/40 hover:bg-purple-600/20 transition-all duration-300"
+        >
+          <!-- Profile Picture or Icon -->
+          <img 
+            v-if="userProfilePic" 
+            :src="userProfilePic" 
+            alt="Profile" 
+            class="profile-pic-small"
+            @error="handleImageError"
+          />
+          <font-awesome-icon v-else :icon="['fas', 'user-circle']" />
+          <span class="hidden md:inline">{{ userName || 'Profile' }}</span>
+        </router-link>
 
         <!-- Theme Toggle -->
         <button
@@ -180,19 +192,19 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { fas } from '@fortawesome/free-solid-svg-icons';
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 library.add(fas);
 
 const { alertState, showSuccess, showInfo } = useAlert();
 
 const theme = ref(localStorage.getItem("theme") || "dark");
+const userName = ref('');
+const userProfilePic = ref(null);
 
-// Check if user is signed in (you can replace this with your actual auth check)
+// Check if user is signed in using token
 const isSignedIn = computed(() => {
-  // Replace with your actual authentication check
-  // For example: return !!localStorage.getItem('authToken');
-  // or use a Vuex/Pinia store
-  return !!localStorage.getItem('authToken');
+  return !!localStorage.getItem('token');
 });
 
 const applyTheme = () => {
@@ -206,6 +218,41 @@ const toggleTheme = () => {
   showInfo(`Switched to ${theme.value} mode`, 1500);
 };
 
+// Check for user profile picture
+const checkUserProfile = () => {
+  const auth = getAuth();
+  
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.photoURL) {
+      userProfilePic.value = user.photoURL;
+    } else {
+      // Check localStorage for saved user data
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          if (userData.profile_pic) {
+            userProfilePic.value = userData.profile_pic;
+          }
+          if (userData.name) {
+            userName.value = userData.name;
+          }
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      } else {
+        userProfilePic.value = null;
+        userName.value = '';
+      }
+    }
+  });
+};
+
+// Handle image load errors
+const handleImageError = () => {
+  userProfilePic.value = null;
+};
+
 const handleExploreEvents = () => {
   showInfo("Loading events...", 1000);
 };
@@ -216,9 +263,31 @@ const handleGetStarted = () => {
 
 onMounted(() => {
   applyTheme();
+  checkUserProfile();
+  
+  // Load user data from localStorage
+  const userData = localStorage.getItem('user');
+  if (userData) {
+    try {
+      const parsed = JSON.parse(userData);
+      userName.value = parsed.name || '';
+      
+      // Set profile picture from user data if available
+      if (parsed.profile_pic) {
+        userProfilePic.value = parsed.profile_pic;
+      }
+    } catch (err) {
+      console.error('Failed to parse user data:', err);
+    }
+  }
+  
   // Welcome message on page load
   setTimeout(() => {
-    showInfo("Welcome to Eventra! 🎉", 2000);
+    if (isSignedIn.value && userName.value) {
+      showInfo(`Welcome back, ${userName.value}! 🎉`, 2000);
+    } else {
+      showInfo("Welcome to Eventra! 🎉", 2000);
+    }
   }, 500);
 });
 </script>
@@ -412,6 +481,29 @@ html, body {
 .dark .feature-card:hover {
   border-color: rgba(200, 0, 255, 0.6);
   background: linear-gradient(135deg, rgba(22, 27, 34, 0.9), rgba(22, 27, 34, 0.6));
+}
+
+/* Profile Picture Styles */
+.profile-pic-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  transition: all 0.3s ease;
+}
+
+.profile-pic-small:hover {
+  border-color: rgba(168, 85, 247, 0.8);
+  transform: scale(1.1);
+}
+
+.dark .profile-pic-small {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .profile-pic-small:hover {
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 /* Responsive adjustments */

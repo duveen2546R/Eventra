@@ -11,6 +11,34 @@
       :duration="alertState.duration"
     />
 
+    <!-- Delete Confirmation Dialog -->
+    <teleport to="body">
+      <transition name="modal-fade">
+        <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDelete">
+          <div class="modal-content" @click.stop>
+            <div class="modal-header">
+              <font-awesome-icon :icon="['fas', 'exclamation-triangle']" class="text-red-400 text-3xl mb-2" />
+              <h3 class="text-xl font-bold">Confirm Delete</h3>
+            </div>
+            <div class="modal-body">
+              <p class="text-gray-300">Are you sure you want to delete</p>
+              <p class="text-purple-400 font-semibold mt-2">"{{ eventToDelete?.title }}"?</p>
+              <p class="text-sm text-gray-400 mt-2">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+              <button @click="cancelDelete" class="btn-outline">
+                Cancel
+              </button>
+              <button @click="confirmDelete" class="btn-danger">
+                <font-awesome-icon :icon="['fas', 'trash']" class="mr-1" />
+                Delete Event
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </teleport>
+
     <!-- 🌫 Background -->
     <div class="absolute inset-0 overflow-hidden">
       <div class="fog"></div>
@@ -49,7 +77,15 @@
               @click="toggleDropdown"
               class="flex items-center gap-2 border border-purple-400/30 px-3 py-2 rounded-full transition-all duration-300 text-sm hover:bg-purple-600/20"
             >
-              <font-awesome-icon :icon="['fas', 'user-circle']" class="text-lg" />
+              <!-- Profile Picture or Icon -->
+              <img 
+                v-if="userProfilePic" 
+                :src="userProfilePic" 
+                alt="Profile" 
+                class="profile-pic-small"
+                @error="handleImageError"
+              />
+              <font-awesome-icon v-else :icon="['fas', 'user-circle']" class="text-lg" />
               <span v-if="userDetails.name">{{ userDetails.name }}</span>
             </button>
 
@@ -143,7 +179,7 @@
         <div class="relative w-full md:w-72">
           <font-awesome-icon
             :icon="['fas', 'search']"
-            class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-base pointer-events-none"
+            class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base pointer-events-none"
           />
           <input
             v-model="searchQuery"
@@ -157,10 +193,8 @@
             @click="searchQuery = ''; applyFilters();"
             type="button"
             class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-400 text-sm"
-          ><font-awesome-icon
-            :icon="['fas', 'search']"
-            class="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 text-base pointer-events-none"
-          />
+          >
+            <font-awesome-icon :icon="['fas', 'times']" />
           </button>
         </div>
       </div>
@@ -259,6 +293,7 @@ import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 library.add(fas);
 
@@ -270,9 +305,14 @@ const theme = ref(localStorage.getItem("theme") || "dark");
 const loggedIn = ref(!!localStorage.getItem("token"));
 const dropdownOpen = ref(false);
 const userDetails = ref(JSON.parse(localStorage.getItem("user") || "{}"));
+const userProfilePic = ref(null);
 const viewRole = ref(route.query.role || "organizer");
 const searchQuery = ref("");
 const currentTab = ref(route.query.tab || "ongoing");
+
+// Delete confirmation modal
+const showDeleteModal = ref(false);
+const eventToDelete = ref(null);
 
 const tabs = [
   { key: "ongoing", label: "Ongoing" },
@@ -300,6 +340,36 @@ const applyTheme = () => {
 const toggleTheme = () => {
   theme.value = theme.value === "dark" ? "light" : "dark";
   applyTheme();
+};
+
+// Check for user profile picture
+const checkUserProfile = () => {
+  const auth = getAuth();
+  
+  onAuthStateChanged(auth, (user) => {
+    if (user && user.photoURL) {
+      userProfilePic.value = user.photoURL;
+    } else {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          const userData = JSON.parse(savedUser);
+          if (userData.profile_pic) {
+            userProfilePic.value = userData.profile_pic;
+          }
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      } else {
+        userProfilePic.value = null;
+      }
+    }
+  });
+};
+
+// Handle image load errors
+const handleImageError = () => {
+  userProfilePic.value = null;
 };
 
 const setRole = (role) => {
@@ -335,7 +405,7 @@ const categorize = (allEvents) => {
 
   allEvents.forEach((e) => {
     const eventDate = new Date(e.eventTimestamp);
-    const eventEndDate = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000); // Assume 4 hour duration
+    const eventEndDate = new Date(eventDate.getTime() + 4 * 60 * 60 * 1000);
     
     if (eventDate <= now && now <= eventEndDate) {
       ongoing.push(e);
@@ -367,6 +437,19 @@ const applyFilters = () => {
 
 onMounted(() => {
   applyTheme();
+  checkUserProfile();
+  
+  const userData = localStorage.getItem("user");
+  if (userData) {
+    try {
+      const parsed = JSON.parse(userData);
+      if (parsed.profile_pic) {
+        userProfilePic.value = parsed.profile_pic;
+      }
+    } catch (err) {
+      console.error("Failed to parse user data:", err);
+    }
+  }
   
   if (!loggedIn.value) {
     showWarning("Please login to view your events");
@@ -384,17 +467,31 @@ const formatTime = (date) =>
 
 const displayAmount = (amt) => (amt > 0 ? `₹${amt}` : "Free");
 
-const editEvent = (e) => {
-  router.push(`/create?eventId=${e.eventId}`);
+const editEvent = (event) => {
+  // Store event data in sessionStorage for the create/edit page to use
+  sessionStorage.setItem('editEvent', JSON.stringify(event));
+  router.push(`/create?edit=true&eventId=${event.eventId}`);
 };
 
-const deleteEvent = async (e) => {
-  if (!confirm(`Are you sure you want to delete "${e.title}"?`)) return;
+const deleteEvent = (event) => {
+  eventToDelete.value = event;
+  showDeleteModal.value = true;
+};
+
+const cancelDelete = () => {
+  showDeleteModal.value = false;
+  eventToDelete.value = null;
+};
+
+const confirmDelete = async () => {
+  if (!eventToDelete.value) return;
   
   try {
     showInfo("Deleting event...", 1000);
-    await axios.delete(`/api/events/${e.eventId}`);
+    await axios.delete(`/api/events/${eventToDelete.value.eventId}`);
     showSuccess("Event deleted successfully!");
+    showDeleteModal.value = false;
+    eventToDelete.value = null;
     fetchEvents();
   } catch (err) {
     console.error("Error deleting event:", err);
@@ -410,6 +507,7 @@ const logout = () => {
   loggedIn.value = false;
   dropdownOpen.value = false;
   userDetails.value = {};
+  userProfilePic.value = null;
   showInfo("Logged out successfully");
   setTimeout(() => {
     router.push("/auth");
@@ -471,6 +569,82 @@ const logout = () => {
 </style>
 
 <style scoped>
+/* Profile Picture Styles */
+.profile-pic-small {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(168, 85, 247, 0.4);
+  transition: all 0.3s ease;
+}
+
+.profile-pic-small:hover {
+  border-color: rgba(168, 85, 247, 0.8);
+  transform: scale(1.1);
+}
+
+.dark .profile-pic-small {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.dark .profile-pic-small:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.modal-body {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-from .modal-content,
+.modal-fade-leave-to .modal-content {
+  transform: scale(0.9);
+}
+
 .input-box {
   background-color: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(168, 85, 247, 0.25);
