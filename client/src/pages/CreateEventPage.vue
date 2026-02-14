@@ -99,6 +99,133 @@
           <textarea v-model="event.description" placeholder="Enter event description" rows="3" class="input-box resize-none" required></textarea>
         </div>
         
+        <!-- Event Brochure Upload -->
+        <div>
+          <label class="text-sm text-gray-400">Event Brochure (Optional)</label>
+          <p class="text-xs text-gray-500 mb-2">Upload a PDF or image brochure for your event</p>
+          
+          <div class="relative">
+            <input 
+              ref="brochureInput"
+              type="file" 
+              @change="handleBrochureUpload" 
+              accept="image/*,application/pdf"
+              class="hidden" 
+              id="brochure-upload"
+            />
+            <label 
+              for="brochure-upload" 
+              class="flex items-center justify-center gap-2 w-full px-4 py-3 border-2 border-dashed border-purple-400/30 rounded-xl cursor-pointer hover:border-purple-400/60 hover:bg-purple-400/5 transition-all"
+              :class="{ 'border-purple-400/60 bg-purple-400/10': uploadingBrochure }"
+            >
+              <font-awesome-icon 
+                :icon="['fas', uploadingBrochure ? 'spinner' : 'cloud-upload-alt']" 
+                :class="{ 'animate-spin': uploadingBrochure }"
+                class="text-lg text-purple-400"
+              />
+              <span v-if="uploadingBrochure" class="text-sm">Uploading brochure...</span>
+              <span v-else-if="event.brochureUrl" class="text-sm text-green-400">
+                <font-awesome-icon :icon="['fas', 'check-circle']" /> Brochure uploaded
+              </span>
+              <span v-else class="text-sm">Click to upload brochure</span>
+            </label>
+          </div>
+
+          <!-- Brochure Preview/Info -->
+          <div v-if="event.brochureUrl" class="mt-3 p-3 bg-white/5 border border-purple-400/20 rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <font-awesome-icon :icon="['fas', brochureFileType === 'pdf' ? 'file-pdf' : 'file-image']" class="text-purple-400" />
+              <span class="text-sm text-gray-300">{{ brochureFileName || 'Brochure uploaded' }}</span>
+            </div>
+            <div class="flex gap-2">
+              <a 
+                :href="event.brochureUrl" 
+                target="_blank" 
+                class="text-xs px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 rounded-full transition-all"
+              >
+                <font-awesome-icon :icon="['fas', 'eye']" /> View
+              </a>
+              <button 
+                type="button"
+                @click="removeBrochure" 
+                class="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-full transition-all"
+              >
+                <font-awesome-icon :icon="['fas', 'trash']" /> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- QR Code Generator -->
+        <div>
+          <label class="text-sm text-gray-400">Event QR Code (Optional)</label>
+          <p class="text-xs text-gray-500 mb-2">Generate a QR code from a website link (e.g., registration page, event website)</p>
+          
+          <!-- QR Code URL Input -->
+          <div class="flex gap-3">
+            <input 
+              v-model="qrCodeUrl" 
+              type="url" 
+              placeholder="Enter website URL (e.g., https://example.com/event)" 
+              class="input-box flex-1"
+            />
+            <button 
+              type="button"
+              @click="generateQRCode"
+              :disabled="generatingQR || !qrCodeUrl"
+              class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 whitespace-nowrap"
+            >
+              <font-awesome-icon 
+                :icon="['fas', generatingQR ? 'spinner' : 'qrcode']" 
+                :class="{ 'animate-spin': generatingQR }"
+                class="mr-2"
+              />
+              {{ generatingQR ? 'Generating...' : 'Generate QR' }}
+            </button>
+          </div>
+
+          <!-- QR Code Preview -->
+          <div v-if="qrCodePreview" class="mt-4 p-4 bg-white/5 border border-purple-400/20 rounded-lg">
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+              <!-- QR Code Image -->
+              <div class="flex-shrink-0">
+                <img :src="qrCodePreview" alt="QR Code Preview" class="w-32 h-32 rounded-lg border border-purple-400/30" />
+              </div>
+              
+              <!-- QR Code Info and Actions -->
+              <div class="flex-1 flex flex-col gap-2">
+                <div class="flex items-center gap-2">
+                  <font-awesome-icon :icon="['fas', 'qrcode']" class="text-purple-400" />
+                  <span class="text-sm text-gray-300">QR Code generated for: {{ qrCodeUrl }}</span>
+                </div>
+                
+                <div class="flex items-center gap-2 text-xs text-green-400">
+                  <font-awesome-icon :icon="['fas', 'check-circle']" />
+                  <span>Stored as base64 - Ready to save</span>
+                </div>
+                
+                <div class="flex gap-2 flex-wrap mt-2">
+                  <button 
+                    type="button"
+                    @click="downloadQR"
+                    class="text-xs px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-full transition-all"
+                  >
+                    <font-awesome-icon :icon="['fas', 'download']" /> Download
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    @click="removeQRCode"
+                    class="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-full transition-all"
+                  >
+                    <font-awesome-icon :icon="['fas', 'trash']" /> Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <!-- MAP WITH SEARCH -->
         <div>
           <label class="text-sm text-gray-400">Set Event Location on Map</label>
@@ -161,9 +288,13 @@
             <input v-model.number="event.remainingCapacity" type="number" placeholder="e.g. 100" class="input-box" required />
           </div>
         </div>
-        <button type="submit" class="mt-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all">
+        <button 
+          type="submit" 
+          :disabled="uploadingBrochure"
+          class="mt-4 py-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow-lg hover:scale-105 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
           <font-awesome-icon :icon="['fas', isEditMode ? 'save' : 'plus']" class="mr-2" /> 
-          {{ isEditMode ? 'Update Event' : 'Create Event' }}
+          {{ uploadingBrochure ? 'Uploading...' : (isEditMode ? 'Update Event' : 'Create Event') }}
         </button>
       </form>
     </main>
@@ -185,6 +316,8 @@ import CustomDatePicker from '../components/CustomDatePicker.vue';
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { uploadToCloudinary } from '../services/cloudinary';
+import { generateQRCodeDataURL, downloadQRCode as downloadQRCodeHelper } from '../services/qrcode';
 
 // Font Awesome Setup
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -214,6 +347,18 @@ let map = null;
 let marker = null;
 const isEditMode = ref(false);
 const editEventId = ref(null);
+
+// Brochure upload state
+const uploadingBrochure = ref(false);
+const brochureInput = ref(null);
+const brochureFileName = ref('');
+const brochureFileType = ref('');
+
+// QR Code state
+const qrCodeUrl = ref('');
+const qrCodePreview = ref('');
+const generatingQR = ref(false);
+
 const event = ref({
   title: "",
   description: "",
@@ -226,7 +371,116 @@ const event = ref({
   eventDate: "",
   eventTime: "",
   remainingCapacity: 100,
+  brochureUrl: "",
+  qrCodeUrl: "", // Stores the base64 data URL
 });
+
+// --- BROCHURE UPLOAD HANDLER ---
+const handleBrochureUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Validate file type
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+  if (!validTypes.includes(file.type)) {
+    showError('Please upload a valid image (JPG, PNG, WEBP) or PDF file');
+    return;
+  }
+
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    showError('File size must be less than 10MB');
+    return;
+  }
+
+  try {
+    uploadingBrochure.value = true;
+    showInfo('Uploading brochure...', 1000);
+
+    // Upload to Cloudinary
+    const url = await uploadToCloudinary(file);
+    
+    event.value.brochureUrl = url;
+    brochureFileName.value = file.name;
+    brochureFileType.value = file.type === 'application/pdf' ? 'pdf' : 'image';
+
+    showSuccess('Brochure uploaded successfully!');
+  } catch (error) {
+    console.error('Error uploading brochure:', error);
+    showError('Failed to upload brochure. Please try again.');
+  } finally {
+    uploadingBrochure.value = false;
+  }
+};
+
+// --- REMOVE BROCHURE ---
+const removeBrochure = () => {
+  event.value.brochureUrl = '';
+  brochureFileName.value = '';
+  brochureFileType.value = '';
+  if (brochureInput.value) {
+    brochureInput.value.value = '';
+  }
+  showInfo('Brochure removed');
+};
+
+// --- QR CODE HANDLERS ---
+const generateQRCode = async () => {
+  if (!qrCodeUrl.value) {
+    showWarning('Please enter a URL to generate QR code');
+    return;
+  }
+
+  // Validate URL format
+  try {
+    new URL(qrCodeUrl.value);
+  } catch (e) {
+    showError('Please enter a valid URL (must include http:// or https://)');
+    return;
+  }
+
+  try {
+    generatingQR.value = true;
+    showInfo('Generating QR code...', 1000);
+
+    // Generate QR code as data URL (base64)
+    const dataUrl = await generateQRCodeDataURL(qrCodeUrl.value, {
+      width: 512,
+      margin: 2,
+      errorCorrectionLevel: 'H'
+    });
+
+    qrCodePreview.value = dataUrl;
+    // Store the base64 directly in the event object
+    event.value.qrCodeUrl = dataUrl;
+    
+    showSuccess('QR code generated successfully!');
+  } catch (error) {
+    console.error('Error generating QR code:', error);
+    showError('Failed to generate QR code. Please try again.');
+  } finally {
+    generatingQR.value = false;
+  }
+};
+
+const downloadQR = () => {
+  if (!qrCodePreview.value) {
+    showWarning('No QR code to download');
+    return;
+  }
+
+  downloadQRCodeHelper(qrCodePreview.value, `event-qr-${Date.now()}.png`);
+  showSuccess('QR code downloaded!');
+};
+
+const removeQRCode = () => {
+  qrCodePreview.value = '';
+  qrCodeUrl.value = '';
+  event.value.qrCodeUrl = '';
+  showInfo('QR code removed');
+};
+
 
 // --- LOAD EDIT DATA ---
 const loadEditData = () => {
@@ -262,7 +516,25 @@ const loadEditData = () => {
           eventDate: dateStr,
           eventTime: timeStr,
           remainingCapacity: editData.remainingCapacity || editData.capacity || 100,
+          brochureUrl: editData.brochureUrl || "",
+          qrCodeUrl: editData.qrCodeUrl || "",
         };
+
+        // Set brochure file info if exists
+        if (editData.brochureUrl) {
+          brochureFileName.value = 'Existing brochure';
+          // Try to detect file type from URL
+          if (editData.brochureUrl.toLowerCase().includes('.pdf')) {
+            brochureFileType.value = 'pdf';
+          } else {
+            brochureFileType.value = 'image';
+          }
+        }
+
+        // Set QR code preview if exists (base64 data URL)
+        if (editData.qrCodeUrl) {
+          qrCodePreview.value = editData.qrCodeUrl;
+        }
         
         showInfo('Editing event: ' + editData.title, 2000);
         
@@ -381,6 +653,11 @@ const updateLocation = (latLng) => {
 
 // --- API & FORM LOGIC ---
 const submitEvent = async () => {
+  if (uploadingBrochure.value) {
+    showWarning('Please wait for brochure upload to complete');
+    return;
+  }
+
   if (isEditMode.value) {
     await updateEvent();
   } else {
@@ -427,6 +704,8 @@ const createEvent = async () => {
       capacity: event.value.capacity, 
       status: event.value.status,
       eventTimestamp: eventTimestamp,
+      brochureUrl: event.value.brochureUrl || null,
+      qrCodeUrl: event.value.qrCodeUrl || null, // Base64 data URL
     };
 
     await axios.post("/api/events", payload, {
@@ -492,6 +771,8 @@ const updateEvent = async () => {
       remainingCapacity: event.value.remainingCapacity,
       status: event.value.status,
       eventTimestamp: eventTimestamp,
+      brochureUrl: event.value.brochureUrl || null,
+      qrCodeUrl: event.value.qrCodeUrl || null, // Base64 data URL
     };
 
     await axios.put(`/api/events/${editEventId.value}`, payload, {
@@ -724,5 +1005,19 @@ const logout = () => {
 .input-error {
   border-color: #ef4444 !important;
   box-shadow: 0 0 0 1px #ef4444;
+}
+
+/* Spinner animation for upload */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>

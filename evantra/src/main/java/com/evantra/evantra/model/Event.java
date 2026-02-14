@@ -15,7 +15,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Getter
 @Setter
 @Entity
-@Table(name = "events") // Using lowercase 'events' as this is the new convention we established
+@Table(name = "events")
 public class Event {
 
     @Id
@@ -26,7 +26,7 @@ public class Event {
     @Column(nullable = false)
     private String title;
 
-    @Column(length = 1024) // Allow for longer descriptions
+    @Column(length = 1024)
     private String description;
 
     @Column(nullable = false)
@@ -35,38 +35,52 @@ public class Event {
     private String latitude;
     private String longitude;
 
-    @Column(name = "brochure_url")
-    private String brochureUrl;
-    
-    // Note: The participant-specific QR code URL is on the EventParticipant table.
-    // This could be for a general event QR code, if needed.
-    @Column(name = "qr_code_url")
+    @Column(name = "qr_code_url", columnDefinition = "TEXT")
     private String qrCodeUrl;
+
+    @Column(name = "brochure_url", columnDefinition = "TEXT")
+    private String brochureUrl;
 
     @Column(nullable = false)
     private BigDecimal amount;
 
     @Column(nullable = false)
-    private Integer capacity; // Use Integer for capacity as it represents a whole number
+    private Integer capacity;
 
+    /**
+     * Tracks the number of spots remaining for the event
+     * This should be updated when participants register/cancel
+     */
+    @Column(name = "remaining_capacity")
+    private Integer remainingCapacity;
+
+    @Column(nullable = false)
     private String status;
     
-    // --- NEWLY ADDED FIELD ---
-    // This field will store the actual date and time of the event
-    // that the user picks on the front end.
+    /**
+     * The actual date and time when the event will occur
+     * Set by the organizer during event creation/editing
+     */
     @Column(name = "event_timestamp")
     private LocalDateTime eventTimestamp;
-    // -----------------------
 
+    /**
+     * When this event record was created in the database
+     */
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @JsonIgnore // Add this to break infinite recursion
+    @JsonIgnore
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<EventOrganizer> eventOrganizers = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
         createdAt = OffsetDateTime.now();
+        
+        // Initialize remaining capacity to match total capacity if not set
+        if (remainingCapacity == null && capacity != null) {
+            remainingCapacity = capacity;
+        }
     }
 }

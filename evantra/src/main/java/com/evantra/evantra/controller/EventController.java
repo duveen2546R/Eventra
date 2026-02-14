@@ -1,6 +1,7 @@
 package com.evantra.evantra.controller;
 
 import com.evantra.evantra.config.RazorpayProperties;
+import com.evantra.evantra.dto.EventDetailsResponse;
 import com.evantra.evantra.dto.PaymentVerificationRequest;
 import com.evantra.evantra.model.*;
 import com.evantra.evantra.repository.*;
@@ -21,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/events")
@@ -33,16 +35,51 @@ public class EventController {
     @Autowired private EventRepository eventRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private EventParticipantRepository eventParticipantRepository;
-    @Autowired private EventOrganizerRepository eventOrganizerRepository; // For the "My Events" feature
-    @Autowired private PaymentRepository paymentRepository; // For creating payment records
+    @Autowired private EventOrganizerRepository eventOrganizerRepository;
+    @Autowired private PaymentRepository paymentRepository;
 
     // ===================================================================
     // = PUBLIC & GENERAL EVENT ENDPOINTS
     // ===================================================================
 
+    // ✅ UPDATED: Return all event details + stats
     @GetMapping
-    public List<Event> getAllEvents() {
-        return eventRepository.findAll();
+    public ResponseEntity<List<EventDetailsResponse>> getAllEvents() {
+
+        List<Event> events = eventRepository.findAll();
+
+        List<EventDetailsResponse> response = events.stream()
+                .map((Event event) -> {
+
+                    long totalRegistrations =
+                            eventParticipantRepository.countByEvent_EventId(event.getEventId());
+
+                    long checkedInCount =
+                            eventParticipantRepository.countByEvent_EventIdAndCheckedIn(
+                                    event.getEventId(), true
+                            );
+
+                    return new EventDetailsResponse(
+                            event.getEventId(),
+                            event.getTitle(),
+                            event.getDescription(),
+                            event.getLocation(),
+                            event.getLatitude(),       // String
+                            event.getLongitude(),      // String
+                            event.getAmount(),
+                            event.getCapacity(),
+                            event.getRemainingCapacity(),
+                            event.getStatus(),
+                            event.getEventTimestamp(), // LocalDateTime
+                            event.getBrochureUrl(),
+                            event.getQrCodeUrl(),
+                            totalRegistrations,
+                            checkedInCount
+                    );
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -51,10 +88,11 @@ public class EventController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-    
+
     // ===================================================================
     // = AUTHENTICATED EVENT MANAGEMENT (CRUD)
     // ===================================================================
+
     @PostMapping
     public Event createEvent(@RequestBody Event event, Principal principal) {
 
@@ -79,7 +117,7 @@ public class EventController {
 
         return savedEvent;
     }
-    
+
     @PutMapping("/{id}")
     public ResponseEntity<Event> updateEvent(@PathVariable UUID id, @RequestBody Event eventDetails) {
         return eventRepository.findById(id)
@@ -87,8 +125,20 @@ public class EventController {
                     event.setTitle(eventDetails.getTitle());
                     event.setDescription(eventDetails.getDescription());
                     event.setLocation(eventDetails.getLocation());
+                    event.setLatitude(eventDetails.getLatitude());
+                    event.setLongitude(eventDetails.getLongitude());
                     event.setAmount(eventDetails.getAmount());
                     event.setCapacity(eventDetails.getCapacity());
+                    event.setRemainingCapacity(eventDetails.getRemainingCapacity());
+                    event.setStatus(eventDetails.getStatus());
+                    event.setEventTimestamp(eventDetails.getEventTimestamp());
+
+                    // brochure URL
+                    event.setBrochureUrl(eventDetails.getBrochureUrl());
+
+                    // QR Code URL
+                    event.setQrCodeUrl(eventDetails.getQrCodeUrl());
+
                     eventRepository.save(event);
                     return ResponseEntity.ok(event);
                 })
@@ -99,7 +149,6 @@ public class EventController {
     public ResponseEntity<?> deleteEvent(@PathVariable UUID id) {
         return eventRepository.findById(id)
                 .map(event -> {
-                    // For production, you should handle cleanup of related participants and payments
                     eventRepository.delete(event);
                     return ResponseEntity.ok().build();
                 })
@@ -115,13 +164,16 @@ public class EventController {
         if (!userRepository.existsById(userId)) {
             return ResponseEntity.notFound().build();
         }
+
         if ("organizer".equalsIgnoreCase(role)) {
             List<Event> organizedEvents = eventOrganizerRepository.findEventsByOrganizerUserId(userId);
             return ResponseEntity.ok(organizedEvents);
+
         } else if ("participant".equalsIgnoreCase(role)) {
             List<Event> participatedEvents = eventParticipantRepository.findEventsByParticipantUserId(userId);
             return ResponseEntity.ok(participatedEvents);
         }
+
         return ResponseEntity.badRequest().body(null);
     }
 
@@ -130,52 +182,72 @@ public class EventController {
         if (!eventRepository.existsById(eventId)) {
             return ResponseEntity.notFound().build();
         }
+
         long totalRegistrations = eventParticipantRepository.countByEvent_EventId(eventId);
         long checkedInCount = eventParticipantRepository.countByEvent_EventIdAndCheckedIn(eventId, true);
+
         Map<String, Object> stats = new HashMap<>();
         stats.put("eventId", eventId);
         stats.put("totalRegistrations", totalRegistrations);
         stats.put("checkedInCount", checkedInCount);
+
         return ResponseEntity.ok(stats);
     }
-    
+
     // ===================================================================
     // = REGISTRATION AND PAYMENT FLOW
     // ===================================================================
-    
+
     @PostMapping("/{eventId}/register-free")
-    public ResponseEntity<?> registerForFreeEvent(@PathVariable UUID eventId, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> registerForFreeEvent(@PathVariable UUID eventId,
+                                                  @RequestBody Map<String, String> payload) {
+
         UUID userId = UUID.fromString(payload.get("userId"));
+
         Event event = eventRepository.findById(eventId).orElse(null);
         User user = userRepository.findById(userId).orElse(null);
 
-        if (event == null || user == null) { return ResponseEntity.badRequest().body("Event or User not found"); }
+        if (event == null || user == null) {
+            return ResponseEntity.badRequest().body("Event or User not found");
+        }
+
         if (event.getAmount() != null && event.getAmount().compareTo(BigDecimal.ZERO) > 0) {
             return ResponseEntity.badRequest().body("This is a paid event. Please use the payment flow.");
         }
+
         if (eventParticipantRepository.existsByEventAndUser(event, user)) {
             return ResponseEntity.badRequest().body("User is already registered for this event.");
         }
-        
+
         eventRegistrationService.finalizeRegistration(user, event, "FREE_REGISTRATION", "N/A");
+
         return ResponseEntity.ok("Successfully registered for the free event. Confirmation email sent.");
     }
-    
+
     @PostMapping("/{eventId}/create-order")
-    public ResponseEntity<?> createOrder(@PathVariable UUID eventId, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> createOrder(@PathVariable UUID eventId,
+                                         @RequestBody Map<String, String> payload) {
         try {
             UUID userId = UUID.fromString(payload.get("userId"));
-            Event event = eventRepository.findById(eventId).orElseThrow(() -> new RuntimeException("Event not found"));
-            userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+
+            Event event = eventRepository.findById(eventId)
+                    .orElseThrow(() -> new RuntimeException("Event not found"));
+
+            userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
             if (event.getAmount() == null || event.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
                 return ResponseEntity.badRequest().body("This is a free event. Use the /register-free endpoint.");
             }
 
-            BigDecimal amountInPaisa = event.getAmount().multiply(new BigDecimal("100")).setScale(0, RoundingMode.HALF_UP);
+            BigDecimal amountInPaisa = event.getAmount()
+                    .multiply(new BigDecimal("100"))
+                    .setScale(0, RoundingMode.HALF_UP);
+
             JSONObject orderRequest = new JSONObject();
             orderRequest.put("amount", amountInPaisa.intValue());
             orderRequest.put("currency", "INR");
+
             String receiptId = "rcpt_" + System.currentTimeMillis();
             orderRequest.put("receipt", receiptId);
 
@@ -185,13 +257,14 @@ public class EventController {
             response.put("order_id", order.get("id"));
             response.put("amount", order.get("amount").toString());
             response.put("key", razorpayProperties.getId());
-            
+
             return ResponseEntity.ok(response);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
         }
     }
-    
+
     @PostMapping("/verify-payment")
     public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerificationRequest request) {
         try {
@@ -199,15 +272,19 @@ public class EventController {
             options.put("razorpay_order_id", request.getRazorpay_order_id());
             options.put("razorpay_payment_id", request.getRazorpay_payment_id());
             options.put("razorpay_signature", request.getRazorpay_signature());
-            
-            boolean signatureIsValid = Utils.verifyPaymentSignature(options, razorpayProperties.getSecret());
+
+            boolean signatureIsValid =
+                    Utils.verifyPaymentSignature(options, razorpayProperties.getSecret());
 
             if (!signatureIsValid) {
                 return ResponseEntity.status(400).body("Payment verification failed: Invalid signature.");
             }
 
-            User user = userRepository.findById(request.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
-            Event event = eventRepository.findById(request.getEventId()).orElseThrow(() -> new RuntimeException("Event not found"));
+            User user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Event event = eventRepository.findById(request.getEventId())
+                    .orElseThrow(() -> new RuntimeException("Event not found"));
 
             // Create and save the payment record
             Payment payment = new Payment();
@@ -220,12 +297,18 @@ public class EventController {
             payment.setUser(user);
             payment.setEvent(event);
             payment.setPaidAt(OffsetDateTime.now());
+
             paymentRepository.save(payment);
 
             EventParticipant participant = eventRegistrationService.finalizeRegistration(
-                    user, event, request.getRazorpay_order_id(), request.getRazorpay_payment_id());
-            
+                    user,
+                    event,
+                    request.getRazorpay_order_id(),
+                    request.getRazorpay_payment_id()
+            );
+
             return ResponseEntity.ok(participant);
+
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error verifying payment: " + e.getMessage());
         }
