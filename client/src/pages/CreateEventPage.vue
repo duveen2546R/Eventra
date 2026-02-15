@@ -99,6 +99,101 @@
           <textarea v-model="event.description" placeholder="Enter event description" rows="3" class="input-box resize-none" required></textarea>
         </div>
         
+        <!-- Contact Information Section -->
+        <div class="border-t border-purple-400/20 pt-6 mt-4">
+          <h3 class="text-lg font-semibold text-purple-400 mb-4">
+            <font-awesome-icon :icon="['fas', 'address-book']" class="mr-2" />
+            Contact Information (Optional)
+          </h3>
+          <p class="text-xs text-gray-500 mb-4">Add phone numbers and email addresses for attendees to reach you with queries.</p>
+          
+          <!-- Phone Numbers -->
+          <div class="mb-6">
+            <label class="text-sm text-gray-400">Contact Phone Numbers</label>
+            <div class="flex gap-2 mt-2">
+              <input 
+                v-model="newPhone" 
+                type="tel" 
+                placeholder="e.g., +91 98765 43210" 
+                class="input-box flex-1"
+                @keypress.enter.prevent="addPhone"
+              />
+              <button 
+                type="button"
+                @click="addPhone"
+                class="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-xl transition-all whitespace-nowrap"
+              >
+                <font-awesome-icon :icon="['fas', 'plus']" class="mr-1" /> Add
+              </button>
+            </div>
+            
+            <!-- Phone List -->
+            <div v-if="event.contactPhones.length > 0" class="mt-3 space-y-2">
+              <div 
+                v-for="(phone, index) in event.contactPhones" 
+                :key="index"
+                class="flex items-center justify-between p-3 bg-white/5 border border-purple-400/20 rounded-lg"
+              >
+                <div class="flex items-center gap-2">
+                  <font-awesome-icon :icon="['fas', 'phone']" class="text-purple-400" />
+                  <span class="text-sm">{{ phone }}</span>
+                </div>
+                <button 
+                  type="button"
+                  @click="removePhone(index)"
+                  class="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-full transition-all"
+                >
+                  <font-awesome-icon :icon="['fas', 'times']" /> Remove
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-500 mt-2 italic">No phone numbers added yet</p>
+          </div>
+
+          <!-- Email Addresses -->
+          <div>
+            <label class="text-sm text-gray-400">Contact Email Addresses</label>
+            <div class="flex gap-2 mt-2">
+              <input 
+                v-model="newEmail" 
+                type="email" 
+                placeholder="e.g., contact@example.com" 
+                class="input-box flex-1"
+                @keypress.enter.prevent="addEmail"
+              />
+              <button 
+                type="button"
+                @click="addEmail"
+                class="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-xl transition-all whitespace-nowrap"
+              >
+                <font-awesome-icon :icon="['fas', 'plus']" class="mr-1" /> Add
+              </button>
+            </div>
+            
+            <!-- Email List -->
+            <div v-if="event.contactEmails.length > 0" class="mt-3 space-y-2">
+              <div 
+                v-for="(email, index) in event.contactEmails" 
+                :key="index"
+                class="flex items-center justify-between p-3 bg-white/5 border border-purple-400/20 rounded-lg"
+              >
+                <div class="flex items-center gap-2">
+                  <font-awesome-icon :icon="['fas', 'envelope']" class="text-purple-400" />
+                  <span class="text-sm">{{ email }}</span>
+                </div>
+                <button 
+                  type="button"
+                  @click="removeEmail(index)"
+                  class="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-full transition-all"
+                >
+                  <font-awesome-icon :icon="['fas', 'times']" /> Remove
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-500 mt-2 italic">No email addresses added yet</p>
+          </div>
+        </div>
+        
         <!-- Event Brochure Upload -->
         <div>
           <label class="text-sm text-gray-400">Event Brochure (Optional)</label>
@@ -359,6 +454,10 @@ const qrCodeUrl = ref('');
 const qrCodePreview = ref('');
 const generatingQR = ref(false);
 
+// Contact input state
+const newPhone = ref('');
+const newEmail = ref('');
+
 const event = ref({
   title: "",
   description: "",
@@ -373,7 +472,66 @@ const event = ref({
   remainingCapacity: 100,
   brochureUrl: "",
   qrCodeUrl: "", // Stores the base64 data URL
+  contactPhones: [], // Array of phone numbers
+  contactEmails: [], // Array of email addresses
 });
+
+// --- CONTACT MANAGEMENT FUNCTIONS ---
+const addPhone = () => {
+  if (!newPhone.value.trim()) {
+    showWarning('Please enter a phone number');
+    return;
+  }
+  
+  // Basic phone validation (adjust regex as needed)
+  const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+  if (!phoneRegex.test(newPhone.value.trim())) {
+    showWarning('Please enter a valid phone number');
+    return;
+  }
+  
+  if (event.value.contactPhones.includes(newPhone.value.trim())) {
+    showWarning('This phone number is already added');
+    return;
+  }
+  
+  event.value.contactPhones.push(newPhone.value.trim());
+  newPhone.value = '';
+  showSuccess('Phone number added');
+};
+
+const removePhone = (index) => {
+  event.value.contactPhones.splice(index, 1);
+  showInfo('Phone number removed');
+};
+
+const addEmail = () => {
+  if (!newEmail.value.trim()) {
+    showWarning('Please enter an email address');
+    return;
+  }
+  
+  // Email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(newEmail.value.trim())) {
+    showWarning('Please enter a valid email address');
+    return;
+  }
+  
+  if (event.value.contactEmails.includes(newEmail.value.trim().toLowerCase())) {
+    showWarning('This email is already added');
+    return;
+  }
+  
+  event.value.contactEmails.push(newEmail.value.trim().toLowerCase());
+  newEmail.value = '';
+  showSuccess('Email address added');
+};
+
+const removeEmail = (index) => {
+  event.value.contactEmails.splice(index, 1);
+  showInfo('Email address removed');
+};
 
 // --- BROCHURE UPLOAD HANDLER ---
 const handleBrochureUpload = async (e) => {
@@ -518,6 +676,8 @@ const loadEditData = () => {
           remainingCapacity: editData.remainingCapacity || editData.capacity || 100,
           brochureUrl: editData.brochureUrl || "",
           qrCodeUrl: editData.qrCodeUrl || "",
+          contactPhones: editData.contactPhones || [],
+          contactEmails: editData.contactEmails || [],
         };
 
         // Set brochure file info if exists
@@ -705,7 +865,9 @@ const createEvent = async () => {
       status: event.value.status,
       eventTimestamp: eventTimestamp,
       brochureUrl: event.value.brochureUrl || null,
-      qrCodeUrl: event.value.qrCodeUrl || null, // Base64 data URL
+      qrCodeUrl: event.value.qrCodeUrl || null,
+      contactPhones: event.value.contactPhones.length > 0 ? event.value.contactPhones : null,
+      contactEmails: event.value.contactEmails.length > 0 ? event.value.contactEmails : null,
     };
 
     await axios.post("/api/events", payload, {
@@ -772,7 +934,9 @@ const updateEvent = async () => {
       status: event.value.status,
       eventTimestamp: eventTimestamp,
       brochureUrl: event.value.brochureUrl || null,
-      qrCodeUrl: event.value.qrCodeUrl || null, // Base64 data URL
+      qrCodeUrl: event.value.qrCodeUrl || null,
+      contactPhones: event.value.contactPhones.length > 0 ? event.value.contactPhones : null,
+      contactEmails: event.value.contactEmails.length > 0 ? event.value.contactEmails : null,
     };
 
     await axios.put(`/api/events/${editEventId.value}`, payload, {

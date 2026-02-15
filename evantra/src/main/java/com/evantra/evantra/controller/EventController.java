@@ -60,22 +60,24 @@ public class EventController {
                             );
 
                     return new EventDetailsResponse(
-                            event.getEventId(),
-                            event.getTitle(),
-                            event.getDescription(),
-                            event.getLocation(),
-                            event.getLatitude(),       // String
-                            event.getLongitude(),      // String
-                            event.getAmount(),
-                            event.getCapacity(),
-                            event.getRemainingCapacity(),
-                            event.getStatus(),
-                            event.getEventTimestamp(), // LocalDateTime
-                            event.getBrochureUrl(),
-                            event.getQrCodeUrl(),
-                            totalRegistrations,
-                            checkedInCount
-                    );
+                        event.getEventId(),
+                        event.getTitle(),
+                        event.getDescription(),
+                        event.getLocation(),
+                        event.getLatitude(),
+                        event.getLongitude(),
+                        event.getAmount(),
+                        event.getCapacity(),
+                        event.getRemainingCapacity(),
+                        event.getStatus(),
+                        event.getEventTimestamp(),
+                        event.getBrochureUrl(),
+                        event.getQrCodeUrl(),
+                        event.getPhoneNo(),
+                        event.getEmail(),
+                        totalRegistrations,
+                        checkedInCount
+                );
                 })
                 .collect(Collectors.toList());
 

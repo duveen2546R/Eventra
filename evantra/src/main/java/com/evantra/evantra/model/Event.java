@@ -1,16 +1,18 @@
 package com.evantra.evantra.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.util.ArrayList;
 
 @Getter
 @Setter
@@ -56,13 +58,19 @@ public class Event {
 
     @Column(nullable = false)
     private String status;
-    
+
     /**
      * The actual date and time when the event will occur
      * Set by the organizer during event creation/editing
      */
     @Column(name = "event_timestamp")
     private LocalDateTime eventTimestamp;
+
+    @Column(name = "phone_no", columnDefinition = "text[]")
+    private String[] phoneNo;
+
+    @Column(name = "email", columnDefinition = "text[]")
+    private String[] email;
 
     /**
      * When this event record was created in the database
@@ -77,7 +85,7 @@ public class Event {
     @PrePersist
     protected void onCreate() {
         createdAt = OffsetDateTime.now();
-        
+
         // Initialize remaining capacity to match total capacity if not set
         if (remainingCapacity == null && capacity != null) {
             remainingCapacity = capacity;

@@ -8,7 +8,7 @@ import java.time.OffsetDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "Event_Organizers")
+@Table(name = "event_organizers")
 public class EventOrganizer {
 
     @EmbeddedId

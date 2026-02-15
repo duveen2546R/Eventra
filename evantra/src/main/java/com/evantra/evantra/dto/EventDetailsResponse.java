@@ -24,6 +24,10 @@ public class EventDetailsResponse {
     private String brochureUrl;
     private String qrCodeUrl;
 
+    // NEW (arrays)
+    private String[] phoneNo;
+    private String[] email;
+
     private Long totalRegistrations;
     private Long checkedInCount;
 
@@ -35,6 +39,7 @@ public class EventDetailsResponse {
                                 Integer capacity, Integer remainingCapacity, String status,
                                 LocalDateTime eventTimestamp,
                                 String brochureUrl, String qrCodeUrl,
+                                String[] phoneNo, String[] email,
                                 Long totalRegistrations, Long checkedInCount) {
 
         this.eventId = eventId;
@@ -50,6 +55,8 @@ public class EventDetailsResponse {
         this.eventTimestamp = eventTimestamp;
         this.brochureUrl = brochureUrl;
         this.qrCodeUrl = qrCodeUrl;
+        this.phoneNo = phoneNo;
+        this.email = email;
         this.totalRegistrations = totalRegistrations;
         this.checkedInCount = checkedInCount;
     }
@@ -156,6 +163,22 @@ public class EventDetailsResponse {
 
     public void setQrCodeUrl(String qrCodeUrl) {
         this.qrCodeUrl = qrCodeUrl;
+    }
+
+    public String[] getPhoneNo() {
+        return phoneNo;
+    }
+
+    public void setPhoneNo(String[] phoneNo) {
+        this.phoneNo = phoneNo;
+    }
+
+    public String[] getEmail() {
+        return email;
+    }
+
+    public void setEmail(String[] email) {
+        this.email = email;
     }
 
     public Long getTotalRegistrations() {
