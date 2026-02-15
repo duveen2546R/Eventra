@@ -204,7 +204,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import {api} from '../services/api.js';
+import api from '../services/api.js';
 import Chart from 'chart.js/auto';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';

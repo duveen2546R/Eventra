@@ -265,7 +265,7 @@ import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert.js';
 import { useFirebaseAuth } from '../composables/useFirebaseAuth.js';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { api } from '../services/api.js';
+import api from '../services/api.js';
 library.add(fas);
 
 const router = useRouter();
