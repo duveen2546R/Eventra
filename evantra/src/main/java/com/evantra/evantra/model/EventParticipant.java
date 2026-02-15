@@ -34,6 +34,9 @@ public class EventParticipant {
     @Column(name = "checked_in")
     private boolean checkedIn = false;
 
+    @Column(name = "checked_in_at")
+    private OffsetDateTime checkedInAt;
+
     @Column(name = "registered_at", nullable = false, updatable = false)
     private OffsetDateTime registeredAt;
 

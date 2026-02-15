@@ -1,4 +1,21 @@
 .git
+<<<<<<< HEAD
 .idea
 .vscode
 *.iml
+=======
+.gitignore
+.idea
+.vscode
+
+target
+build
+out
+*.log
+backend.log
+
+node_modules
+
+.env
+.env.*
+>>>>>>> 27166d7 (Fixes Done)

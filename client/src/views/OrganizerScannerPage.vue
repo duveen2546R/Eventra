@@ -288,11 +288,12 @@
               Recent Check-ins
             </h2>
             <button
-              @click="fetchRecentCheckIns"
+              @click="refreshScannerPage"
+              :disabled="refreshing"
               class="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 rounded-xl transition-all text-sm font-semibold"
             >
-              <font-awesome-icon :icon="['fas', 'sync']" class="mr-2" />
-              Refresh
+              <font-awesome-icon :icon="['fas', 'sync']" class="mr-2" :class="{ 'animate-spin': refreshing }" />
+              {{ refreshing ? 'Refreshing...' : 'Refresh' }}
             </button>
           </div>
 
@@ -355,7 +356,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -374,6 +375,7 @@ const { alertState, showSuccess, showError, showWarning, showInfo } = useAlert()
 const theme = ref(localStorage.getItem("theme") || "dark");
 const loading = ref(true);
 const processing = ref(false);
+const refreshing = ref(false);
 
 // Event and stats
 const event = ref(null);
@@ -444,6 +446,11 @@ const clearResult = () => {
 // QR Scanner functions
 const startScanner = async () => {
   try {
+    // Reader element must be visible before starting camera, otherwise
+    // some devices initialize with zero-size frames and fail to decode.
+    scannerActive.value = true;
+    await nextTick();
+
     html5QrCode.value = new Html5Qrcode("qr-reader");
     
     await html5QrCode.value.start(
@@ -456,10 +463,10 @@ const startScanner = async () => {
       onScanFailure
     );
     
-    scannerActive.value = true;
     showInfo("Scanner started. Point camera at QR code.");
   } catch (err) {
     console.error("Error starting scanner:", err);
+    scannerActive.value = false;
     showError("Failed to start camera. Please check permissions.");
   }
 };
@@ -511,11 +518,8 @@ const performCheckIn = async (passId) => {
       type: 'success'
     };
     
-    // Update stats
-    stats.value.checkedInCount++;
-    
-    // Refresh recent check-ins
-    await fetchRecentCheckIns();
+    // Refresh data from backend to avoid stale UI counters
+    await refreshStatsAndRecent(true);
     
     showSuccess("Participant checked in successfully!");
     
@@ -557,14 +561,11 @@ const undoCheckIn = async (passId) => {
     
     showSuccess("Check-in undone successfully!");
     
-    // Update stats
-    stats.value.checkedInCount--;
-    
     // Clear result
     clearResult();
     
-    // Refresh recent check-ins
-    await fetchRecentCheckIns();
+    // Refresh data from backend to avoid stale UI counters
+    await refreshStatsAndRecent(true);
     
   } catch (err) {
     console.error("Undo check-in error:", err);
@@ -578,7 +579,7 @@ const playSuccessSound = () => {
   audio.play().catch(() => {});
 };
 
-const fetchEventDetails = async () => {
+const fetchEventDetails = async (forceRefresh = false) => {
   const eventId = route.params.eventId;
   
   if (!eventId) {
@@ -588,14 +589,14 @@ const fetchEventDetails = async () => {
   }
 
   try {
+<<<<<<< HEAD
     const response = await api.get(`/api/events/${eventId}`);
+=======
+    const response = await axios.get(`/api/events/${eventId}`, {
+      params: forceRefresh ? { _ts: Date.now() } : {}
+    });
+>>>>>>> 27166d7 (Fixes Done)
     event.value = response.data;
-    
-    stats.value = {
-      totalRegistrations: response.data.totalRegistrations || 0,
-      checkedInCount: response.data.checkedInCount || 0
-    };
-    
   } catch (err) {
     console.error("Error fetching event:", err);
     showError("Failed to load event details");
@@ -604,14 +605,72 @@ const fetchEventDetails = async () => {
   }
 };
 
-const fetchRecentCheckIns = async () => {
+const fetchEventStats = async (forceRefresh = false) => {
+  const eventId = route.params.eventId;
+
+  try {
+    const response = await axios.get(`/api/events/${eventId}/stats`, {
+      params: forceRefresh ? { _ts: Date.now() } : {}
+    });
+    stats.value = {
+      totalRegistrations: response.data.totalRegistrations || 0,
+      checkedInCount: response.data.checkedInCount || 0
+    };
+  } catch (err) {
+    console.error("Error fetching event stats:", err);
+    // Fallback: infer total registrations from participants list when stats endpoint fails
+    try {
+      const participantsRes = await axios.get(`/api/event-organizers/participants/${eventId}`, {
+        params: forceRefresh ? { _ts: Date.now() } : {}
+      });
+      const total = Array.isArray(participantsRes.data) ? participantsRes.data.length : 0;
+      stats.value = {
+        totalRegistrations: total,
+        checkedInCount: stats.value.checkedInCount || 0
+      };
+    } catch (fallbackErr) {
+      console.error("Error fetching participant fallback stats:", fallbackErr);
+    }
+  }
+};
+
+const fetchRecentCheckIns = async (forceRefresh = false) => {
   const eventId = route.params.eventId;
   
   try {
+<<<<<<< HEAD
     const response = await api.get(`/api/event-organizers/recent-checkins/${eventId}?limit=10`);
+=======
+    const params = { limit: 10 };
+    if (forceRefresh) params._ts = Date.now();
+
+    const response = await axios.get(`/api/event-organizers/recent-checkins/${eventId}`, {
+      params
+    });
+>>>>>>> 27166d7 (Fixes Done)
     recentCheckIns.value = response.data;
   } catch (err) {
     console.error("Error fetching recent check-ins:", err);
+  }
+};
+
+const refreshStatsAndRecent = async (forceRefresh = false) => {
+  await Promise.all([
+    fetchEventStats(forceRefresh),
+    fetchRecentCheckIns(forceRefresh)
+  ]);
+};
+
+const refreshScannerPage = async () => {
+  if (refreshing.value) return;
+  refreshing.value = true;
+
+  try {
+    await fetchEventDetails(true);
+    await refreshStatsAndRecent(true);
+    showInfo("Scanner data refreshed");
+  } finally {
+    refreshing.value = false;
   }
 };
 
@@ -625,7 +684,7 @@ onMounted(async () => {
   }
 
   await fetchEventDetails();
-  await fetchRecentCheckIns();
+  await refreshStatsAndRecent();
 });
 
 onBeforeUnmount(() => {

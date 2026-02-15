@@ -3,6 +3,7 @@ package com.evantra.evantra.repository;
 import com.evantra.evantra.model.Event;
 import com.evantra.evantra.model.EventParticipant;
 import com.evantra.evantra.model.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,4 +32,13 @@ public interface EventParticipantRepository extends JpaRepository<EventParticipa
     List<Event> findEventsByParticipantUserId(@Param("userId") UUID userId);
 
     List<EventParticipant> findAllByEvent_EventId(UUID eventId);
+
+    @Query("""
+            SELECT ep
+            FROM EventParticipant ep
+            WHERE ep.event.eventId = :eventId
+              AND ep.checkedIn = true
+            ORDER BY COALESCE(ep.checkedInAt, ep.registeredAt) DESC
+            """)
+    List<EventParticipant> findRecentCheckedInByEventId(@Param("eventId") UUID eventId, Pageable pageable);
 }

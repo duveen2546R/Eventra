@@ -57,6 +57,9 @@ public class EventParticipantController {
             response.put("qrCodeUrl", participant.getQrCodeUrl());
             response.put("passId", participant.getPassId());
             response.put("checkedIn", participant.isCheckedIn());
+            response.put("checkedInTime", participant.getCheckedInAt());
+            response.put("registrationDate", participant.getRegisteredAt());
+            response.put("createdAt", participant.getRegisteredAt());
 
             return ResponseEntity.ok(response);
 

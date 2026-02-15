@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,6 +42,7 @@ public class CheckinController {
         }
 
         participant.setCheckedIn(true);
+        participant.setCheckedInAt(OffsetDateTime.now());
         eventParticipantRepository.save(participant);
 
         Checkin checkin = new Checkin();

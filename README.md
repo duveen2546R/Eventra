@@ -66,11 +66,28 @@ Please add more screenshots of the application to showcase its features.
 ### Backend Setup
 
 1.  Navigate to the `evantra` directory.
-2.  Update the `application.properties` file in `src/main/resources/` with your database and Razorpay credentials.
+2.  Configure credentials using environment variables (or rely on defaults in `application.properties`).
 3.  Run the application:
     ```bash
     ./mvnw spring-boot:run
     ```
+
+### Backend Setup (Docker)
+
+1. Navigate to the `evantra` directory.
+2. Create an env file:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit `.env` with your database, mail, JWT, and Razorpay values.
+4. Build and run:
+   ```bash
+   docker compose up --build -d
+   ```
+5. View logs:
+   ```bash
+   docker compose logs -f backend
+   ```
 
 ### Frontend Setup
 

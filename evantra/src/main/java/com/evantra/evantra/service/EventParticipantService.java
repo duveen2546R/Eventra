@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -105,6 +106,7 @@ public class EventParticipantService {
         }
 
         participant.setCheckedIn(true);
+        participant.setCheckedInAt(OffsetDateTime.now());
         eventParticipantRepository.save(participant);
 
         CheckInResponse response = new CheckInResponse();
