@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDvxhzJnxhfj0gZr69W2WGIZr3IMp_8gBU",
-    authDomain: "eventra-c3703.firebaseapp.com",
-    projectId: "eventra-c3703",
-    storageBucket: "eventra-c3703.firebasestorage.app",
-    messagingSenderId: "599432520576",
-    appId: "1:599432520576:web:896a35d7649a1e2f085765",
-    measurementId: "G-TY7LP8S6G2"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
