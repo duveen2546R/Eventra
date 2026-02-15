@@ -8,11 +8,10 @@ import com.evantra.evantra.model.User;
 import com.evantra.evantra.repository.EventParticipantRepository;
 import com.evantra.evantra.repository.EventRepository;
 import com.evantra.evantra.repository.UserRepository;
-import com.google.zxing.WriterException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,11 +27,8 @@ public class EventParticipantService {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private QrCodeService qrCodeService;
-
-
     // ---------------- REGISTER PARTICIPANT ----------------
+    @Transactional
     public RegisterParticipantResponse registerParticipant(UUID eventId, UUID userId) throws Exception {
 
         // Check already registered
@@ -53,16 +49,15 @@ public class EventParticipantService {
         Event event = eventOpt.get();
         User user = userOpt.get();
 
+        Integer availableSpots = event.getRemainingCapacity() != null
+                ? event.getRemainingCapacity()
+                : event.getCapacity();
+        if (availableSpots == null || availableSpots <= 0) {
+            throw new Exception("Event is full.");
+        }
+
         // Generate passId
         String passId = generatePassId(eventId, userId);
-
-        // Generate QR Base64 using passId
-        String qrCodeBase64;
-        try {
-            qrCodeBase64 = qrCodeService.generateQrBase64(passId);
-        } catch (WriterException | IOException e) {
-            throw new Exception("QR code generation failed.");
-        }
 
         // Create participant record
         EventParticipant participant = new EventParticipant();
@@ -70,16 +65,25 @@ public class EventParticipantService {
         participant.setUser(user);
         participant.setCheckedIn(false);
         participant.setPassId(passId);
-        participant.setQrCodeUrl(qrCodeBase64);
-        System.out.println("Generated Pass ID: " + passId);
-        System.out.println("Generated QR Code URL: " + qrCodeBase64);
+        EventParticipant savedParticipant = eventParticipantRepository.save(participant);
 
-        eventParticipantRepository.save(participant);
+        String qrCodeUrl = buildParticipantQrUrl(savedParticipant.getParticipantId());
+        savedParticipant.setQrCodeUrl(qrCodeUrl);
+        eventParticipantRepository.save(savedParticipant);
+
+        int currentRemaining = event.getRemainingCapacity() != null
+                ? event.getRemainingCapacity()
+                : event.getCapacity();
+        event.setRemainingCapacity(Math.max(0, currentRemaining - 1));
+        eventRepository.save(event);
+
+        System.out.println("Generated Pass ID: " + passId);
+        System.out.println("Generated QR Code URL: " + qrCodeUrl);
 
         RegisterParticipantResponse response = new RegisterParticipantResponse();
         response.setMessage("Registered successfully.");
         response.setPassId(passId);
-        response.setQrCodeUrl(qrCodeBase64);
+        response.setQrCodeUrl(qrCodeUrl);
         response.setCheckedIn(false);
 
         return response;
@@ -122,6 +126,25 @@ public class EventParticipantService {
             throw new Exception("Participant not found.");
         }
 
+        boolean participantUpdated = false;
+
+        if (participant.getPassId() == null || participant.getPassId().isBlank()) {
+            String fallbackPassId = participant.getParticipantId() != null
+                    ? participant.getParticipantId().toString()
+                    : generatePassId(eventId, userId);
+            participant.setPassId(fallbackPassId);
+            participantUpdated = true;
+        }
+
+        if (!hasRenderableQrCode(participant.getQrCodeUrl()) && participant.getParticipantId() != null) {
+            participant.setQrCodeUrl(buildParticipantQrUrl(participant.getParticipantId()));
+            participantUpdated = true;
+        }
+
+        if (participantUpdated) {
+            participant = eventParticipantRepository.save(participant);
+        }
+
         return participant;
     }
 
@@ -134,5 +157,21 @@ public class EventParticipantService {
         String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
         return "EVT-" + eventShort + "-USR-" + userShort + "-" + random;
+    }
+
+    private boolean hasRenderableQrCode(String qrCodeUrl) {
+        if (qrCodeUrl == null || qrCodeUrl.isBlank()) {
+            return false;
+        }
+
+        return qrCodeUrl.startsWith("data:image/")
+                || qrCodeUrl.startsWith("http://")
+                || qrCodeUrl.startsWith("https://")
+                || qrCodeUrl.startsWith("/api/participants/")
+                || qrCodeUrl.startsWith("/api/event-participants/qr/");
+    }
+
+    private String buildParticipantQrUrl(UUID participantId) {
+        return "/api/participants/" + participantId + "/qr";
     }
 }

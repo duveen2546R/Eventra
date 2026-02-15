@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 public class EventRegistrationService {
 
@@ -24,6 +26,14 @@ public class EventRegistrationService {
         if (eventParticipantRepository.existsByEventAndUser(event, user)) {
             throw new IllegalStateException("User is already registered for this event.");
         }
+
+        Integer availableSpots = event.getRemainingCapacity() != null
+                ? event.getRemainingCapacity()
+                : event.getCapacity();
+        if (availableSpots == null || availableSpots <= 0) {
+            throw new IllegalStateException("Event is full.");
+        }
+
         // 1. Create the Payment record
         Payment payment = new Payment();
         payment.setAmount(event.getAmount());
@@ -34,27 +44,38 @@ public class EventRegistrationService {
         EventParticipant participant = new EventParticipant();
         participant.setEvent(event);
         participant.setUser(user);
+        participant.setCheckedIn(false);
 
-        // Save participant first to get its ID
+        // Keep pass generation consistent with participant registration flow.
+        String passId = generatePassId(event.getEventId(), user.getUserId());
+        participant.setPassId(passId);
+
         EventParticipant savedParticipant = eventParticipantRepository.save(participant);
+        savedParticipant.setQrCodeUrl("/api/participants/" + savedParticipant.getParticipantId() + "/qr");
+        eventParticipantRepository.save(savedParticipant);
 
         // Link payment to participant and save
-        
         paymentRepository.save(payment);
 
-        // 3. Generate QR code and send email
-        String qrCodeData = savedParticipant.getParticipantId().toString();
-        savedParticipant.setQrCodeUrl("/api/participants/" + qrCodeData + "/qr");
-        eventParticipantRepository.save(savedParticipant); // Update with QR URL
-
-        // 5. Decrement the event capacity
+        // 5. Decrement remaining spots without changing total capacity
         Event eventToUpdate = savedParticipant.getEvent();
-        eventToUpdate.setCapacity(eventToUpdate.getCapacity() - 1);
+        int currentRemaining = eventToUpdate.getRemainingCapacity() != null
+                ? eventToUpdate.getRemainingCapacity()
+                : eventToUpdate.getCapacity();
+        eventToUpdate.setRemainingCapacity(Math.max(0, currentRemaining - 1));
         eventRepository.save(eventToUpdate);
 
         // 4. Send the email asynchronously
-        new Thread(() -> emailService.sendEventRegistrationEmail(user, event, qrCodeData)).start();
+        new Thread(() -> emailService.sendEventRegistrationEmail(user, event, passId)).start();
 
         return savedParticipant;
+    }
+
+    private String generatePassId(UUID eventId, UUID userId) {
+        String eventShort = eventId.toString().substring(0, 6).toUpperCase();
+        String userShort = userId.toString().substring(0, 6).toUpperCase();
+        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        return "EVT-" + eventShort + "-USR-" + userShort + "-" + random;
     }
 }

@@ -221,7 +221,11 @@ public class EventController {
             return ResponseEntity.badRequest().body("User is already registered for this event.");
         }
 
-        eventRegistrationService.finalizeRegistration(user, event, "FREE_REGISTRATION", "N/A");
+        try {
+            eventRegistrationService.finalizeRegistration(user, event, "FREE_REGISTRATION", "N/A");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
 
         return ResponseEntity.ok("Successfully registered for the free event. Confirmation email sent.");
     }
@@ -311,6 +315,8 @@ public class EventController {
 
             return ResponseEntity.ok(participant);
 
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error verifying payment: " + e.getMessage());
         }

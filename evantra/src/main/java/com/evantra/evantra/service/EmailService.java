@@ -2,10 +2,6 @@ package com.evantra.evantra.service;
 
 import com.evantra.evantra.model.Event;
 import com.evantra.evantra.model.User;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.client.j2se.MatrixToImageWriter;
-import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -14,7 +10,6 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 
 @Service
@@ -22,6 +17,9 @@ public class EmailService {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    @Autowired
+    private QrCodeService qrCodeService;
 
     public void sendWelcomeEmail(User user) {
         try {
@@ -45,20 +43,14 @@ public class EmailService {
         }
     }
 
-    public void sendEventRegistrationEmail(User user, Event event, String qrCodeData) {
+    public void sendEventRegistrationEmail(User user, Event event, String qrPayload) {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             // Use multipart: true to allow attachments
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.name());
 
-            // --- Generate QR Code Image ---
-            QRCodeWriter qrCodeWriter = new QRCodeWriter();
-            BitMatrix bitMatrix = qrCodeWriter.encode(qrCodeData, BarcodeFormat.QR_CODE, 200, 200);
-
-            ByteArrayOutputStream pngOutputStream = new ByteArrayOutputStream();
-            MatrixToImageWriter.writeToStream(bitMatrix, "PNG", pngOutputStream);
-            byte[] pngData = pngOutputStream.toByteArray();
-            // -----------------------------
+            // Use the same generator used by website QR endpoint.
+            byte[] pngData = qrCodeService.generateQrPngBytes(qrPayload);
 
             String htmlTemplate = new String(new ClassPathResource("templates/event-registration-email.html").getInputStream().readAllBytes());
 

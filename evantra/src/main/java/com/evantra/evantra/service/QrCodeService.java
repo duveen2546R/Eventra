@@ -14,7 +14,7 @@ import java.util.Base64;
 @Service
 public class QrCodeService {
 
-    public String generateQrBase64(String text) throws WriterException, IOException {
+    public byte[] generateQrPngBytes(String text) throws WriterException, IOException {
 
         QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
@@ -23,7 +23,11 @@ public class QrCodeService {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         MatrixToImageWriter.writeToStream(bitMatrix, "PNG", outputStream);
 
-        byte[] pngData = outputStream.toByteArray();
+        return outputStream.toByteArray();
+    }
+
+    public String generateQrBase64(String text) throws WriterException, IOException {
+        byte[] pngData = generateQrPngBytes(text);
 
         return "data:image/png;base64," + Base64.getEncoder().encodeToString(pngData);
     }
