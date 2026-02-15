@@ -372,10 +372,10 @@ const fetchTicket = async () => {
     // Fetch participant ticket data
     const response = await api.get(`/api/event-participants/${eventId}/${userId}`);
     const data = response.data;
-    console.log("Fetched ticket data:", data);
+    
     ticket.value = data;
     passId.value = data.passId;
-    qrCodeUrl.value = data.qrCodeUrl;
+    qrCodeUrl.value = `${import.meta.env.VITE_API_BASE_URL}${data.qrCodeUrl}`;
     checkedIn.value = data.checkedIn || false;
     checkedInTime.value = data.checkedInTime;
     registrationDate.value = data.participant.registeredAt;
