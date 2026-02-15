@@ -375,7 +375,7 @@ const fetchTicket = async () => {
     
     ticket.value = data;
     passId.value = data.passId;
-    qrCodeUrl.value = `${import.meta.env.VITE_API_BASE_URL}${data.qrCodeUrl}`;
+    qrCodeUrl.value = `${import.meta.env.VITE_BACKEND_URL}${data.qrCodeUrl}`;
     checkedIn.value = data.checkedIn || false;
     checkedInTime.value = data.checkedInTime;
     registrationDate.value = data.participant.registeredAt;
