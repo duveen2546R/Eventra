@@ -357,7 +357,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -499,7 +499,7 @@ const performCheckIn = async (passId) => {
   
   try {
     const eventId = route.params.eventId;
-    const response = await axios.post(`/api/event-organizers/checkin/${eventId}/${passId}`);
+    const response = await api.post(`/api/event-organizers/checkin/${eventId}/${passId}`);
     
     const data = response.data;
     
@@ -553,7 +553,7 @@ const checkInManual = () => {
 const undoCheckIn = async (passId) => {
   try {
     const eventId = route.params.eventId;
-    await axios.post(`/api/event-organizers/undo-checkin/${eventId}/${passId}`);
+    await api.post(`/api/event-organizers/undo-checkin/${eventId}/${passId}`);
     
     showSuccess("Check-in undone successfully!");
     
@@ -588,7 +588,7 @@ const fetchEventDetails = async () => {
   }
 
   try {
-    const response = await axios.get(`/api/events/${eventId}`);
+    const response = await api.get(`/api/events/${eventId}`);
     event.value = response.data;
     
     stats.value = {
@@ -608,7 +608,7 @@ const fetchRecentCheckIns = async () => {
   const eventId = route.params.eventId;
   
   try {
-    const response = await axios.get(`/api/event-organizers/recent-checkins/${eventId}?limit=10`);
+    const response = await api.get(`/api/event-organizers/recent-checkins/${eventId}?limit=10`);
     recentCheckIns.value = response.data;
   } catch (err) {
     console.error("Error fetching recent check-ins:", err);

@@ -256,7 +256,7 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { fas } from "@fortawesome/free-solid-svg-icons";
@@ -370,13 +370,13 @@ const fetchStats = async () => {
     const token = localStorage.getItem('token');
     
     // Fetch events as organizer
-    const organizerResponse = await axios.get("/api/events/mine", {
+    const organizerResponse = await api.get("/api/events/mine", {
       params: { userId, role: 'organizer' },
       headers: { Authorization: `Bearer ${token}` }
     });
     
     // Fetch events as participant
-    const participantResponse = await axios.get("/api/events/mine", {
+    const participantResponse = await api.get("/api/events/mine", {
       params: { userId, role: 'participant' },
       headers: { Authorization: `Bearer ${token}` }
     });

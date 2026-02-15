@@ -260,13 +260,12 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { useRouter } from 'vue-router';
-import axios from "axios";
 import CustomDatePicker from '../components/CustomDatePicker.vue';
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert.js';
 import { useFirebaseAuth } from '../composables/useFirebaseAuth.js';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-
+import { api } from '../services/api.js';
 library.add(fas);
 
 const router = useRouter();
@@ -413,7 +412,7 @@ const handleGoogleSignIn = async () => {
             return;
         }
 
-        const response = await axios.post("/api/auth/firebase-auth", {
+        const response = await api.post("/api/auth/firebase-auth", {
             idToken: idToken
         });
 
@@ -434,7 +433,7 @@ const handleGoogleSignIn = async () => {
             showError("Backend did not return user data.");
             return;
         }
-        console.log('userProfilePic after Google Sign-In:', userProfilePic.value);
+        //console.log('userProfilePic after Google Sign-In:', userProfilePic.value);
         setTimeout(() => router.push("/home"), 1000);
 
     } catch (error) {
@@ -457,7 +456,7 @@ const handleLogin = async () => {
     
     // Fallback to original backend authentication
     try {
-      const response = await axios.post("/api/auth/login", {
+      const response = await api.post("/api/auth/login", {
         email: loginForm.value.email,
         password: loginForm.value.password,
       });
@@ -513,9 +512,9 @@ const handleRegister = async () => {
           phoneNo: registerForm.value.phone,
         };
 
-        await axios.post("/api/auth/firebase-register", payload);
+        await api.post("/api/auth/firebase-register", payload);
       } catch (error) {
-        console.log('Backend registration optional - continuing with Firebase auth');
+        console.error('Backend registration optional - continuing with Firebase auth');
       }
       
       showSuccess("Registration successful! You're now signed in.");
@@ -534,7 +533,7 @@ const handleRegister = async () => {
         password: registerForm.value.password,
       };
 
-      const response = await axios.post("/api/auth/register", payload);
+      const response = await api.post("/api/auth/register", payload);
 
       // Set profile picture from backend response if available
       if (response.data.userData && response.data.userData.profile_pic) {

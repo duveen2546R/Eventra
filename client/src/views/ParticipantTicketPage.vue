@@ -247,7 +247,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import axios from "axios";
+import { api } from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -370,9 +370,8 @@ const fetchTicket = async () => {
 
   try {
     // Fetch participant ticket data
-    const response = await axios.get(`/api/event-participants/${eventId}/${userId}`);
+    const response = await api.get(`/api/event-participants/${eventId}/${userId}`);
     const data = response.data;
-    console.log(data);
     ticket.value = data;
     passId.value = data.passId;
     qrCodeUrl.value = data.qrCodeUrl;
@@ -381,7 +380,7 @@ const fetchTicket = async () => {
     registrationDate.value = data.participant.registeredAt;
 
     // Fetch event details
-    const eventResponse = await axios.get(`/api/events/${eventId}`);
+    const eventResponse = await api.get(`/api/events/${eventId}`);
     const eventData = eventResponse.data;
     
     eventTitle.value = eventData.title;

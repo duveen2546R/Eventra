@@ -257,7 +257,7 @@
 <script setup>
 import { ref, reactive, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -353,7 +353,7 @@ const fetchEvents = async () => {
   try {
     showInfo("Loading events...", 1000);
     const userId = userDetails.value?.user_id;
-    const res = await axios.get("/api/events/mine", {
+    const res = await api.get("/api/events/mine", {
       params: { userId, role: viewRole.value },
     });
     categorize(res.data);
@@ -456,7 +456,7 @@ const confirmDelete = async () => {
   
   try {
     showInfo("Deleting event...", 1000);
-    await axios.delete(`/api/events/${eventToDelete.value.eventId}`);
+    await api.delete(`/api/events/${eventToDelete.value.eventId}`);
     showSuccess("Event deleted successfully!");
     showDeleteModal.value = false;
     eventToDelete.value = null;

@@ -204,7 +204,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import {api} from '../services/api.js';
 import Chart from 'chart.js/auto';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { fas } from '@fortawesome/free-solid-svg-icons';
@@ -282,7 +282,7 @@ const fetchInsights = async () => {
     const userId = JSON.parse(localStorage.getItem('user')).user_id;
     const token = localStorage.getItem('token');
     
-    const response = await axios.get(`/api/payments/insights/${userId}`, {
+    const response = await api.get(`/api/payments/insights/${userId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

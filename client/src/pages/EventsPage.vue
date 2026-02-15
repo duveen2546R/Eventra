@@ -197,7 +197,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -315,9 +315,8 @@ onMounted(async () => {
 
   // Fetch events regardless of login status
   try {
-    const response = await axios.get("/api/events");
+    const response = await api.get("/api/events");
     events.value = response.data || [];
-    console.log("Fetched events:", events.value);
     
     if (events.value.length > 0) {
       showInfo(`Found ${events.value.length} events`, 2000);
@@ -342,7 +341,7 @@ const registerEvent = async (event) => {
 
   // Check if user is already registered
   try {
-    const isRegisteredResponse = await axios.get(`/api/event-participants/is-registered/${event.eventId}/${user.user_id}`);
+    const isRegisteredResponse = await api.get(`/api/event-participants/is-registered/${event.eventId}/${user.user_id}`);
     if (isRegisteredResponse.data) {
       showInfo("You are already registered for this event!");
       return;
@@ -356,7 +355,7 @@ const registerEvent = async (event) => {
   if (event.amount <= 0) {
     // Free event
     try {
-      await axios.post(`/api/events/${event.eventId}/register-free`, {
+      await api.post(`/api/events/${event.eventId}/register-free`, {
         userId: user.user_id,
       });
       showSuccess("Successfully registered for the event!");
@@ -376,7 +375,7 @@ const registerEvent = async (event) => {
     showInfo("Preparing payment...", 1000);
     
     const token = localStorage.getItem("token");
-    const response = await axios.post(`/api/events/${event.eventId}/create-order`, {
+    const response = await api.post(`/api/events/${event.eventId}/create-order`, {
       userId: user.user_id,
     }, {
       headers: {
@@ -384,7 +383,6 @@ const registerEvent = async (event) => {
       },
     });
     const orderData = response.data;
-    console.log("Order data:", orderData);
 
     const options = {
       key: orderData.key,
@@ -396,7 +394,7 @@ const registerEvent = async (event) => {
       handler: async function (paymentResponse) {
         const token = localStorage.getItem("token");
         try {
-          await axios.post("/api/events/verify-payment", {
+          await api.post("/api/events/verify-payment", {
             userId: user.user_id,
             eventId: event.eventId,
             razorpay_order_id: paymentResponse.razorpay_order_id,
@@ -429,7 +427,6 @@ const registerEvent = async (event) => {
       }
     };
 
-    console.log("Razorpay options:", options);
 
     const razor = new window.Razorpay(options);
     razor.open();

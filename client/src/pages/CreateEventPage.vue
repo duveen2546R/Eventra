@@ -406,7 +406,7 @@ import { ref, onMounted, nextTick } from "vue";
 import { useRouter, useRoute } from 'vue-router';
 import L from 'leaflet';
 import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
-import axios from "axios";
+import api from "../services/api.js";
 import CustomDatePicker from '../components/CustomDatePicker.vue';
 import GlobalAlert from '../components/GlobalAlert.vue';
 import { useAlert } from '../composables/useAlert';
@@ -889,7 +889,7 @@ const createEvent = async () => {
       email: event.value.contactEmails.length > 0 ? event.value.contactEmails : [],
     };
 
-    await axios.post("/api/events", payload, {
+    await api.post("/api/events", payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -959,7 +959,7 @@ const updateEvent = async () => {
       email: event.value.contactEmails.length > 0 ? event.value.contactEmails : [],
     };
 
-    await axios.put(`/api/events/${editEventId.value}`, payload, {
+    await api.put(`/api/events/${editEventId.value}`, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
       },

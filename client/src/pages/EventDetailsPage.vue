@@ -441,7 +441,7 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -640,11 +640,11 @@ const goBack = () => {
 };
 
 const handleImageError = () => {
-  console.log('Error loading event image');
+  console.error('Error loading event image');
 };
 
 const handleQRError = () => {
-  console.log('Error loading QR code');
+  console.error('Error loading QR code');
 };
 
 const downloadBrochure = () => {
@@ -682,7 +682,7 @@ const checkRegistrationStatus = async () => {
   if (!loggedIn.value || !event.value) return;
   
   try {
-    const response = await axios.get(
+    const response = await api.get(
       `/api/event-participants/is-registered/${event.value.eventId}/${userDetails.value.user_id}`
     );
     isRegistered.value = response.data;
@@ -720,7 +720,7 @@ const registerForEvent = async () => {
   if (event.value.amount <= 0) {
     // Free event
     try {
-      await axios.post(`/api/events/${event.value.eventId}/register-free`, {
+      await api.post(`/api/events/${event.value.eventId}/register-free`, {
         userId: user.user_id,
       });
       showSuccess("Successfully registered for the event!");
@@ -743,7 +743,7 @@ const registerForEvent = async () => {
     showInfo("Preparing payment...", 1000);
     
     const token = localStorage.getItem("token");
-    const response = await axios.post(
+    const response = await api.post(
       `/api/events/${event.value.eventId}/create-order`,
       { userId: user.user_id },
       { headers: { Authorization: `Bearer ${token}` } }
@@ -760,7 +760,7 @@ const registerForEvent = async () => {
       handler: async function (paymentResponse) {
         const token = localStorage.getItem("token");
         try {
-          await axios.post("/api/events/verify-payment", {
+          await api.post("/api/events/verify-payment", {
             userId: user.user_id,
             eventId: event.value.eventId,
             razorpay_order_id: paymentResponse.razorpay_order_id,
@@ -826,7 +826,7 @@ onMounted(async () => {
   }
 
   try {
-    const response = await axios.get(`/api/events/${eventId}`);
+    const response = await api.get(`/api/events/${eventId}`);
     event.value = response.data;
     
     // Check if user is already registered

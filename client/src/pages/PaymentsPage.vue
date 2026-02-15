@@ -306,7 +306,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import {api} from '../services/api.js';
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -427,7 +427,7 @@ onMounted(async () => {
     const token = localStorage.getItem("token");
     const userId = JSON.parse(localStorage.getItem("user")).user_id;
     
-    const response = await axios.get("/api/payments", {
+    const response = await api.get("/api/payments", {
       params: { userId },
       headers: {
         Authorization: `Bearer ${token}`,
