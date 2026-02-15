@@ -1,7 +1,8 @@
 <template>
   <div 
-    class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col gap-4 cursor-pointer hover:border-purple-400/40 group"
-    @click="viewEventDetails"
+    class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col gap-4 group"
+    :class="{ 'cursor-pointer hover:border-purple-400/40': !showOrganizerActions }"
+    @click="handleCardClick"
   >
     <!-- Main Event Info -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -46,37 +47,73 @@
         </div>
       </div>
 
-      <div class="flex flex-col gap-2 items-end">
-        <button
-          v-if="status !== 'past'"
-          @click.stop="handleRegister"
-          :disabled="!loggedIn || isFull"
-          :class="[
-            'px-6 py-2.5 rounded-full font-semibold text-white transition-all whitespace-nowrap',
-            loggedIn && !isFull
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 hover:shadow-xl' 
-              : 'bg-gray-500/50 cursor-not-allowed opacity-60'
-          ]"
-        >
-          <font-awesome-icon 
-            v-if="!loggedIn" 
-            :icon="['fas', 'lock']" 
-            class="mr-2" 
-          />
-          <font-awesome-icon 
-            v-else-if="isFull" 
-            :icon="['fas', 'exclamation-circle']" 
-            class="mr-2" 
-          />
-          {{ buttonText }}
-        </button>
-        <span v-else class="px-6 py-2.5 text-gray-500 font-semibold">
-          Event Ended
-        </span>
-        
-        <span v-if="isFull && status !== 'past'" class="text-xs text-red-400">
-          Event Full
-        </span>
+      <!-- Action Buttons -->
+      <div class="flex gap-2 justify-end">
+        <template v-if="showOrganizerActions">
+          <!-- Organizer Actions -->
+          <button
+            @click.stop="handleEdit"
+            class="btn-outline"
+          >
+            <font-awesome-icon :icon="['fas', 'edit']" class="mr-1" /> Edit
+          </button>
+          <button
+            @click.stop="handleDelete"
+            class="btn-danger"
+          >
+            <font-awesome-icon :icon="['fas', 'trash']" class="mr-1" /> Delete
+          </button>
+        </template>
+        <template v-else-if="isMyEvent">
+          <!-- My Events - Show status badge -->
+          <div class="flex items-center gap-2">
+            <span v-if="status === 'ongoing'" class="px-4 py-2.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full font-semibold flex items-center gap-2">
+              <font-awesome-icon :icon="['fas', 'check-circle']" />
+              Registered
+            </span>
+            <span v-else-if="status === 'upcoming'" class="px-4 py-2.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full font-semibold flex items-center gap-2">
+              <font-awesome-icon :icon="['fas', 'check-circle']" />
+              Registered
+            </span>
+            <span v-else class="px-4 py-2.5 bg-gray-500/20 text-gray-400 border border-gray-500/30 rounded-full font-semibold flex items-center gap-2">
+              <font-awesome-icon :icon="['fas', 'check-circle']" />
+              Attended
+            </span>
+          </div>
+        </template>
+        <template v-else>
+          <!-- Browse Events - Show register button -->
+          <button
+            v-if="status !== 'past'"
+            @click.stop="handleRegister"
+            :disabled="!loggedIn || isFull"
+            :class="[
+              'px-6 py-2.5 rounded-full font-semibold text-white transition-all whitespace-nowrap',
+              loggedIn && !isFull
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:scale-105 hover:shadow-xl' 
+                : 'bg-gray-500/50 cursor-not-allowed opacity-60'
+            ]"
+          >
+            <font-awesome-icon 
+              v-if="!loggedIn" 
+              :icon="['fas', 'lock']" 
+              class="mr-2" 
+            />
+            <font-awesome-icon 
+              v-else-if="isFull" 
+              :icon="['fas', 'exclamation-circle']" 
+              class="mr-2" 
+            />
+            {{ buttonText }}
+          </button>
+          <span v-else class="px-6 py-2.5 text-gray-500 font-semibold">
+            Event Ended
+          </span>
+          
+          <span v-if="isFull && status !== 'past'" class="text-xs text-red-400">
+            Event Full
+          </span>
+        </template>
       </div>
     </div>
 
@@ -175,8 +212,8 @@
       </div>
     </div>
 
-    <!-- View Details Button (visible on hover) -->
-    <div class="opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-purple-400/10">
+    <!-- View Details Button (visible on hover) - Only for participant view -->
+    <div v-if="!showOrganizerActions" class="opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-purple-400/10">
       <button 
         @click.stop="viewEventDetails"
         class="w-full px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 rounded-lg transition-all duration-300 text-purple-300 font-semibold text-sm flex items-center justify-center gap-2"
@@ -230,7 +267,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 library.add(fas);
 
 const router = useRouter();
-console.log(event);
+
 const props = defineProps({
   event: {
     type: Object,
@@ -244,10 +281,18 @@ const props = defineProps({
     type: String,
     default: 'upcoming',
     validator: (value) => ['ongoing', 'upcoming', 'past'].includes(value)
+  },
+  showOrganizerActions: {
+    type: Boolean,
+    default: false
+  },
+  isMyEvent: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['register']);
+const emit = defineEmits(['register', 'edit', 'delete']);
 
 const showQRModal = ref(false);
 
@@ -274,6 +319,13 @@ const hasContactInfo = computed(() => {
          (props.event.email && props.event.email.length > 0);
 });
 
+const handleCardClick = () => {
+  // Only navigate on card click for participant view
+  if (!props.showOrganizerActions) {
+    viewEventDetails();
+  }
+};
+
 const viewEventDetails = () => {
   router.push(`/events/${props.event.eventId}`);
 };
@@ -282,6 +334,14 @@ const handleRegister = () => {
   if (props.loggedIn && !isFull.value) {
     emit('register', props.event);
   }
+};
+
+const handleEdit = () => {
+  emit('edit', props.event);
+};
+
+const handleDelete = () => {
+  emit('delete', props.event);
 };
 
 const downloadQR = () => {
@@ -316,6 +376,40 @@ const formatTime = (dateStr) => {
 </script>
 
 <style scoped>
+/* Button Styles */
+.btn-outline {
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 0.5rem 1.2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  color: aliceblue;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-outline:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  padding: 0.5rem 1.2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
 /* QR Modal Styles */
 .qr-modal-overlay {
   position: fixed;

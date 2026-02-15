@@ -226,58 +226,18 @@
 
       <!-- 🎟️ Event Lists -->
       <div v-if="filteredEvents[currentTab].length > 0" class="flex flex-col gap-5">
-        <div
+        <EventCard
           v-for="event in filteredEvents[currentTab]"
           :key="event.eventId"
-          class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col md:flex-row justify-between md:items-center gap-4"
-        >
-          <div class="flex flex-col gap-2 flex-1">
-            <h3 class="text-lg font-semibold text-purple-300">{{ event.title }}</h3>
-            <p class="text-gray-400 text-sm max-w-md line-clamp-2">{{ event.description }}</p>
-            <div class="flex flex-wrap gap-4 md:gap-6 text-sm mt-2">
-              <p class="flex items-center gap-1">
-                <font-awesome-icon :icon="['fas', 'map-marker-alt']" class="text-purple-400" /> 
-                {{ event.location }}
-              </p>
-              <p class="flex items-center gap-1">
-                <font-awesome-icon :icon="['fas', 'calendar']" class="text-purple-400" /> 
-                {{ formatDate(event.eventTimestamp) }}
-              </p>
-              <p class="flex items-center gap-1">
-                <font-awesome-icon :icon="['fas', 'clock']" class="text-purple-400" /> 
-                {{ formatTime(event.eventTimestamp) }}
-              </p>
-              <p class="flex items-center gap-1">
-                <font-awesome-icon :icon="['fas', 'tag']" class="text-purple-400" />
-                <span class="font-semibold">{{ displayAmount(event.amount) }}</span>
-              </p>
-            </div>
-          </div>
-
-          <div class="flex gap-2 justify-end">
-            <button
-              v-if="viewRole === 'organizer'"
-              @click="editEvent(event)"
-              class="btn-outline"
-            >
-              <font-awesome-icon :icon="['fas', 'edit']" class="mr-1" /> Edit
-            </button>
-            <button
-              v-if="viewRole === 'organizer'"
-              @click="deleteEvent(event)"
-              class="btn-danger"
-            >
-              <font-awesome-icon :icon="['fas', 'trash']" class="mr-1" /> Delete
-            </button>
-            <router-link
-              v-if="viewRole === 'participant'"
-              :to="`/events/${event.eventId}`"
-              class="btn-primary"
-            >
-              <font-awesome-icon :icon="['fas', 'eye']" class="mr-1" /> View Details
-            </router-link>
-          </div>
-        </div>
+          :event="event"
+          :logged-in="loggedIn"
+          :status="currentTab"
+          :show-organizer-actions="viewRole === 'organizer'"
+          :is-my-event="viewRole === 'participant'"
+          @register="handleRegister"
+          @edit="editEvent"
+          @delete="deleteEvent"
+        />
       </div>
 
       <div v-else class="text-center text-gray-400 py-20">
@@ -302,6 +262,7 @@ import { library } from "@fortawesome/fontawesome-svg-core";
 import { fas } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import GlobalAlert from '../components/GlobalAlert.vue';
+import EventCard from '../components/EventCard.vue';
 import { useAlert } from '../composables/useAlert';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -445,6 +406,11 @@ const applyFilters = () => {
   });
 };
 
+const handleRegister = (event) => {
+  // For participants viewing registered events, navigate to event details
+  router.push(`/events/${event.eventId}`);
+};
+
 onMounted(() => {
   applyTheme();
   checkUserProfile();
@@ -468,14 +434,6 @@ onMounted(() => {
   
   fetchEvents();
 });
-
-const formatDate = (date) =>
-  new Date(date).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
-
-const formatTime = (date) =>
-  new Date(date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-
-const displayAmount = (amt) => (amt > 0 ? `₹${amt}` : "Free");
 
 const editEvent = (event) => {
   // Store event data in sessionStorage for the create/edit page to use
