@@ -372,13 +372,13 @@ const fetchTicket = async () => {
     // Fetch participant ticket data
     const response = await axios.get(`/api/event-participants/${eventId}/${userId}`);
     const data = response.data;
-
+    console.log(data);
     ticket.value = data;
     passId.value = data.passId;
     qrCodeUrl.value = data.qrCodeUrl;
     checkedIn.value = data.checkedIn || false;
     checkedInTime.value = data.checkedInTime;
-    registrationDate.value = data.createdAt || data.registrationDate;
+    registrationDate.value = data.participant.registeredAt;
 
     // Fetch event details
     const eventResponse = await axios.get(`/api/events/${eventId}`);
