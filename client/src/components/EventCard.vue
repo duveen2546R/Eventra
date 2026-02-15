@@ -1,7 +1,7 @@
 <template>
   <div 
     class="backdrop-blur-lg bg-white/5 border border-purple-400/20 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col gap-4 group"
-    :class="{ 'cursor-pointer hover:border-purple-400/40': !showOrganizerActions }"
+    :class="{ 'cursor-pointer hover:border-purple-400/40': shouldBeClickable }"
     @click="handleCardClick"
   >
     <!-- Main Event Info -->
@@ -212,14 +212,14 @@
       </div>
     </div>
 
-    <!-- View Details Button (visible on hover) - Only for participant view -->
-    <div v-if="!showOrganizerActions" class="opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-purple-400/10">
+    <!-- View Details/Action Button (visible on hover) -->
+    <div class="opacity-0 group-hover:opacity-100 transition-opacity pt-2 border-t border-purple-400/10">
       <button 
-        @click.stop="viewEventDetails"
+        @click.stop="handlePrimaryAction"
         class="w-full px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/30 rounded-lg transition-all duration-300 text-purple-300 font-semibold text-sm flex items-center justify-center gap-2"
       >
-        <font-awesome-icon :icon="['fas', 'eye']" />
-        View Full Event Details
+        <font-awesome-icon :icon="['fas', primaryActionIcon]" />
+        {{ primaryActionText }}
       </button>
     </div>
 
@@ -319,11 +319,40 @@ const hasContactInfo = computed(() => {
          (props.event.email && props.event.email.length > 0);
 });
 
+const shouldBeClickable = computed(() => {
+  // Make card clickable for organizer scanner or participant ticket
+  return props.showOrganizerActions || props.isMyEvent;
+});
+
+const primaryActionIcon = computed(() => {
+  if (props.showOrganizerActions) return 'qrcode';
+  if (props.isMyEvent) return 'ticket-alt';
+  return 'eye';
+});
+
+const primaryActionText = computed(() => {
+  if (props.showOrganizerActions) return 'Open Scanner & Check-in Portal';
+  if (props.isMyEvent) return 'View My Ticket';
+  return 'View Full Event Details';
+});
+
 const handleCardClick = () => {
-  // Only navigate on card click for participant view
-  if (!props.showOrganizerActions) {
+  // Navigate based on role
+  if (props.showOrganizerActions) {
+    // Organizer: go to scanner page
+    router.push(`/organizer/scanner/${props.event.eventId}`);
+  } else if (props.isMyEvent) {
+    // Participant viewing their registered event: go to ticket page
+    router.push(`/participant/ticket/${props.event.eventId}`);
+  } else {
+    // Browse events: go to event details
     viewEventDetails();
   }
+};
+
+const handlePrimaryAction = () => {
+  // Same as card click
+  handleCardClick();
 };
 
 const viewEventDetails = () => {

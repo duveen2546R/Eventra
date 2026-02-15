@@ -661,6 +661,24 @@ const loadEditData = () => {
         const dateStr = eventDateTime.toISOString().split('T')[0]; // YYYY-MM-DD
         const timeStr = eventDateTime.toTimeString().slice(0, 5); // HH:MM
         
+        // Parse phone numbers and emails from database format
+        let contactPhones = [];
+        let contactEmails = [];
+        
+        // If phone_no exists and is a string, split it
+        if (editData.phone_no && typeof editData.phone_no === 'string') {
+          contactPhones = editData.phone_no.split(',').map(p => p.trim()).filter(Boolean);
+        } else if (Array.isArray(editData.contactPhones)) {
+          contactPhones = editData.contactPhones;
+        }
+        
+        // If email exists and is a string, split it
+        if (editData.email && typeof editData.email === 'string') {
+          contactEmails = editData.email.split(',').map(e => e.trim()).filter(Boolean);
+        } else if (Array.isArray(editData.contactEmails)) {
+          contactEmails = editData.contactEmails;
+        }
+        
         // Populate form fields
         event.value = {
           title: editData.title || "",
@@ -676,8 +694,8 @@ const loadEditData = () => {
           remainingCapacity: editData.remainingCapacity || editData.capacity || 100,
           brochureUrl: editData.brochureUrl || "",
           qrCodeUrl: editData.qrCodeUrl || "",
-          contactPhones: editData.contactPhones || [],
-          contactEmails: editData.contactEmails || [],
+          contactPhones: contactPhones,
+          contactEmails: contactEmails,
         };
 
         // Set brochure file info if exists
@@ -866,8 +884,9 @@ const createEvent = async () => {
       eventTimestamp: eventTimestamp,
       brochureUrl: event.value.brochureUrl || null,
       qrCodeUrl: event.value.qrCodeUrl || null,
-      contactPhones: event.value.contactPhones.length > 0 ? event.value.contactPhones : null,
-      contactEmails: event.value.contactEmails.length > 0 ? event.value.contactEmails : null,
+      // Send as comma-separated strings to match database schema
+      phoneNo: event.value.contactPhones.length > 0 ? event.value.contactPhones : [],
+      email: event.value.contactEmails.length > 0 ? event.value.contactEmails : [],
     };
 
     await axios.post("/api/events", payload, {
@@ -935,8 +954,9 @@ const updateEvent = async () => {
       eventTimestamp: eventTimestamp,
       brochureUrl: event.value.brochureUrl || null,
       qrCodeUrl: event.value.qrCodeUrl || null,
-      contactPhones: event.value.contactPhones.length > 0 ? event.value.contactPhones : null,
-      contactEmails: event.value.contactEmails.length > 0 ? event.value.contactEmails : null,
+      // Send as comma-separated strings to match database schema
+      phoneNo: event.value.contactPhones.length > 0 ? event.value.contactPhones : [],
+      email: event.value.contactEmails.length > 0 ? event.value.contactEmails : [],
     };
 
     await axios.put(`/api/events/${editEventId.value}`, payload, {

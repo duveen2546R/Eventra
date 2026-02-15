@@ -9,6 +9,8 @@ import PaymentsPage from "../pages/PaymentsPage.vue";
 import CreateEventPage from "@/pages/CreateEventPage.vue";
 import EventDetailsPage from "@/pages/EventDetailsPage.vue";
 import InsightsPage from "@/pages/InsightsPage.vue";
+import ParticipantTicketPage from "@/views/ParticipantTicketPage.vue";
+import OrganizerScannerPage from "@/views/OrganizerScannerPage.vue";
 
 const routes = [
   {
@@ -55,6 +57,21 @@ const routes = [
     path: "/insights",
     name: "InsightsPage",
     component: InsightsPage,
+  },
+  // Participant ticket page
+  {
+    path: '/participant/ticket/:eventId',
+    name: 'ParticipantTicket',
+    component: ParticipantTicketPage,
+    meta: { requiresAuth: true }
+  },
+  
+  // Organizer scanner page
+  {
+    path: '/organizer/scanner/:eventId',
+    name: 'OrganizerScanner',
+    component: OrganizerScannerPage,
+    meta: { requiresAuth: true }
   }
 ];
 
