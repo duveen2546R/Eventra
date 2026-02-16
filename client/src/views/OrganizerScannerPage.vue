@@ -589,13 +589,9 @@ const fetchEventDetails = async (forceRefresh = false) => {
   }
 
   try {
-<<<<<<< HEAD
-    const response = await api.get(`/api/events/${eventId}`);
-=======
-    const response = await axios.get(`/api/events/${eventId}`, {
+    const response = await api.get(`/api/events/${eventId}`, {
       params: forceRefresh ? { _ts: Date.now() } : {}
     });
->>>>>>> 27166d7 (Fixes Done)
     event.value = response.data;
   } catch (err) {
     console.error("Error fetching event:", err);
@@ -609,7 +605,7 @@ const fetchEventStats = async (forceRefresh = false) => {
   const eventId = route.params.eventId;
 
   try {
-    const response = await axios.get(`/api/events/${eventId}/stats`, {
+    const response = await api.get(`/api/events/${eventId}/stats`, {
       params: forceRefresh ? { _ts: Date.now() } : {}
     });
     stats.value = {
@@ -620,7 +616,7 @@ const fetchEventStats = async (forceRefresh = false) => {
     console.error("Error fetching event stats:", err);
     // Fallback: infer total registrations from participants list when stats endpoint fails
     try {
-      const participantsRes = await axios.get(`/api/event-organizers/participants/${eventId}`, {
+      const participantsRes = await api.get(`/api/event-organizers/participants/${eventId}`, {
         params: forceRefresh ? { _ts: Date.now() } : {}
       });
       const total = Array.isArray(participantsRes.data) ? participantsRes.data.length : 0;
@@ -638,19 +634,45 @@ const fetchRecentCheckIns = async (forceRefresh = false) => {
   const eventId = route.params.eventId;
   
   try {
-<<<<<<< HEAD
-    const response = await api.get(`/api/event-organizers/recent-checkins/${eventId}?limit=10`);
-=======
     const params = { limit: 10 };
     if (forceRefresh) params._ts = Date.now();
 
-    const response = await axios.get(`/api/event-organizers/recent-checkins/${eventId}`, {
+    const response = await api.get(`/api/event-organizers/recent-checkins/${eventId}`, {
       params
     });
->>>>>>> 27166d7 (Fixes Done)
-    recentCheckIns.value = response.data;
+    recentCheckIns.value = Array.isArray(response.data) ? response.data : [];
   } catch (err) {
     console.error("Error fetching recent check-ins:", err);
+    // Fallback for deployments where recent-checkins endpoint is not yet available.
+    try {
+      const params = {};
+      if (forceRefresh) params._ts = Date.now();
+
+      const participantsRes = await api.get(`/api/event-organizers/participants/${eventId}`, {
+        params
+      });
+
+      const participants = Array.isArray(participantsRes.data) ? participantsRes.data : [];
+
+      const derivedRecent = participants
+        .filter((p) => p?.checkedIn)
+        .sort((a, b) => {
+          const aTime = new Date(a?.checkedInAt || a?.registeredAt || 0).getTime();
+          const bTime = new Date(b?.checkedInAt || b?.registeredAt || 0).getTime();
+          return bTime - aTime;
+        })
+        .slice(0, 10)
+        .map((p) => ({
+          name: p?.user?.name || "Unknown Participant",
+          passId: p?.passId || "N/A",
+          checkedInTime: p?.checkedInAt || p?.registeredAt || null
+        }));
+
+      recentCheckIns.value = derivedRecent;
+    } catch (fallbackErr) {
+      console.error("Error deriving recent check-ins from participants:", fallbackErr);
+      recentCheckIns.value = [];
+    }
   }
 };
 

@@ -438,7 +438,12 @@ const handleGoogleSignIn = async () => {
 
     } catch (error) {
         console.error("Backend sync failed:", error);
-        showError("Backend authentication failed!");
+        const message =
+          error.response?.data?.message ||
+          error.response?.data ||
+          error.message ||
+          "Backend authentication failed!";
+        showError(typeof message === "string" ? message : "Backend authentication failed!");
     }
 };
 

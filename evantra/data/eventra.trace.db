@@ -1,0 +1,12 @@
+2026-02-16 22:52:12.903177+05:30 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "create table events (event_id uuid not null, amount numeric(38,2) not null, brochure_url TEXT, capacity integer not null, created_at timestamp(6) with time zone not null, description varchar(1024), email text[*][], event_timestamp timestamp(6), latitude varchar(255), location varchar(255) not null, longitude varchar(255), phone_no text[], qr_code_url TEXT, remaining_capacity integer, status varchar(255) not null, title varchar(255) not null, primary key (event_id))"; expected "(, ARRAY, INVISIBLE, VISIBLE, NOT NULL, DEFAULT, GENERATED, ON UPDATE, NOT NULL, DEFAULT ON NULL, SEQUENCE, SELECTIVITY, COMMENT, CONSTRAINT, COMMENT, PRIMARY KEY, UNIQUE, NOT NULL, CHECK, REFERENCES, ,, )"; SQL statement:
+create table events (event_id uuid not null, amount numeric(38,2) not null, brochure_url TEXT, capacity integer not null, created_at timestamp(6) with time zone not null, description varchar(1024), email text[], event_timestamp timestamp(6), latitude varchar(255), location varchar(255) not null, longitude varchar(255), phone_no text[], qr_code_url TEXT, remaining_capacity integer, status varchar(255) not null, title varchar(255) not null, primary key (event_id)) [42001-224]
+2026-02-16 22:52:12.912770+05:30 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "events" not found; SQL statement:
+alter table if exists event_organizers add constraint FK16stg4khqay3j62bjnxp8rgdb foreign key (event_id) references events [42102-224]
+2026-02-16 22:52:12.916455+05:30 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "events" not found; SQL statement:
+alter table if exists event_participants add constraint FK2x391urx4up03f4jp2y9mdt5x foreign key (event_id) references events [42102-224]
+2026-02-16 22:52:12.918644+05:30 jdbc[3]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "events" not found; SQL statement:
+alter table if exists payments add constraint FKmok6urmuf6s9wdl5hxv8nv3oy foreign key (event_id) references events [42102-224]
