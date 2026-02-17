@@ -9,3 +9,16 @@ services:
     ports:
       - "${SERVER_PORT:-8080}:8080"
     restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.2.0
+    container_name: eventra-cloudflared
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    depends_on:
+      - backend
+    volumes:
+      - ./cloudflared/config.yml:/etc/cloudflared/config.yml:ro
+      - /Users/duveen/.cloudflared/6fd23a56-c35e-4d8e-bef5-f82ecaffcc57.json:/etc/cloudflared/6fd23a56-c35e-4d8e-bef5-f82ecaffcc57.json:ro
+    restart: unless-stopped
+    profiles:
+      - tunnel

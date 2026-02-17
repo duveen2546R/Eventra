@@ -1,0 +1,7 @@
+tunnel: 6fd23a56-c35e-4d8e-bef5-f82ecaffcc57
+credentials-file: /etc/cloudflared/6fd23a56-c35e-4d8e-bef5-f82ecaffcc57.json
+
+ingress:
+  - hostname: api.eventra.com
+    service: http://backend:8080
+  - service: http_status:404

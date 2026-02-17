@@ -4,95 +4,48 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
 public class FirebaseConfig {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FirebaseConfig.class);
+    @Autowired
+    private Environment env;
 
     @PostConstruct
     public void init() {
-        if (!FirebaseApp.getApps().isEmpty()) {
-            return;
-        }
+        try {
+            String firebaseJson = env.getProperty("FIREBASE_SERVICE_ACCOUNT_JSON");
 
-        for (CredentialSource source : getCredentialSources()) {
-            try (InputStream serviceAccount = source.open()) {
-                if (serviceAccount == null) {
-                    continue;
-                }
+            if (firebaseJson == null || firebaseJson.isEmpty()) {
+                throw new RuntimeException("FIREBASE_SERVICE_ACCOUNT_JSON not found in .env or environment variables!");
+            }
 
-                FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                        .build();
+            // Convert \\n into actual newline
+            firebaseJson = firebaseJson.replace("\\n", "\n");
 
+            InputStream serviceAccount = new ByteArrayInputStream(firebaseJson.getBytes(StandardCharsets.UTF_8));
+
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build();
+
+            if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseApp.initializeApp(options);
-                LOGGER.info("Firebase initialized successfully using {}", source.name);
-                return;
-            } catch (Exception e) {
-                LOGGER.warn("Firebase initialization failed using {}: {}", source.name, e.getMessage());
+                System.out.println("Firebase initialized successfully");
+            } else {
+                System.out.println("Firebase already initialized");
             }
-        }
 
-        LOGGER.error("Firebase credentials not configured or invalid. Google login will fail until Firebase admin credentials are fixed.");
-    }
-
-    private List<CredentialSource> getCredentialSources() {
-        List<CredentialSource> sources = new ArrayList<>();
-
-        sources.add(new CredentialSource("FIREBASE_SERVICE_ACCOUNT_JSON", () -> {
-            String firebaseJson = System.getenv("FIREBASE_SERVICE_ACCOUNT_JSON");
-            if (firebaseJson == null || firebaseJson.isBlank()) {
-                return null;
-            }
-            return new ByteArrayInputStream(firebaseJson.getBytes(StandardCharsets.UTF_8));
-        }));
-
-        sources.add(new CredentialSource("FIREBASE_SERVICE_ACCOUNT_PATH", () -> {
-            String serviceAccountPath = System.getenv("FIREBASE_SERVICE_ACCOUNT_PATH");
-            if (serviceAccountPath == null || serviceAccountPath.isBlank()) {
-                return null;
-            }
-            return new FileInputStream(serviceAccountPath);
-        }));
-
-        sources.add(new CredentialSource("classpath:firebase-service-account.json", () -> {
-            ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
-            if (!resource.exists()) {
-                return null;
-            }
-            return resource.getInputStream();
-        }));
-
-        return sources;
-    }
-
-    private interface CredentialProvider {
-        InputStream open() throws Exception;
-    }
-
-    private static class CredentialSource {
-        private final String name;
-        private final CredentialProvider provider;
-
-        private CredentialSource(String name, CredentialProvider provider) {
-            this.name = name;
-            this.provider = provider;
-        }
-
-        private InputStream open() throws Exception {
-            return provider.open();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Firebase initialization failed", e);
         }
     }
 }
